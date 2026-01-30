@@ -1,7 +1,5 @@
 package com.example.veganism
 
-import android.text.SpannableStringBuilder
-
 class Recipe (
     val id: String = "",
     var name: String = "",

@@ -1,165 +1,206 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_page"
-    android:orientation="vertical"
-    android:transitionName="recipe_background_transition"
     tools:context=".RecipeDetailsActivity">
 
-    <TextView
-        android:id="@+id/back"
-        android:layout_width="wrap_content"
-        android:layout_height="50dp"
-        android:layout_margin="10dp"
-        android:clickable="true"
-        android:drawableLeft="@drawable/ic_arrow_left"
-        android:drawablePadding="5dp"
-        android:fontFamily="@font/quicksand_bold"
-        android:gravity="center"
-        android:text="BACK"
-        android:textColor="#000000"
-        android:textSize="20sp" />
-
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
+        <TextView
+            android:id="@+id/back"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:clickable="true"
+            android:drawableLeft="@drawable/ic_arrow_left"
+            android:drawablePadding="5dp"
+            android:fontFamily="@font/quicksand_bold"
+            android:gravity="center"
+            android:text="BACK"
+            android:textColor="#000000"
+            android:textSize="20sp" />
 
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <ImageView
-                android:id="@+id/recipeDetails_recipeImage_iv"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:adjustViewBounds="true"
-                android:src="@drawable/img_recipe_item_example"
-                android:transitionName="recipe_image_transition" />
+            android:layout_height="match_parent">
 
             <LinearLayout
-                android:id="@+id/recipeDetails_fadeIn_ll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/recipeDetails_recipeImage_iv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:src="@drawable/img_recipe_item_example"
+                    android:transitionName="recipe_image_transition" />
+
+                <LinearLayout
+                    android:id="@+id/recipeDetails_fadeIn_ll"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+
+                    android:padding="5dp">
+
+                    <TextView
+                        android:id="@+id/recipeDetails_recipeName_tv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:autoSizeMaxTextSize="50sp"
+                        android:autoSizeMinTextSize="30sp"
+                        android:autoSizeTextType="uniform"
+                        android:fontFamily="@font/quicksand_bold"
+                        android:maxLines="1"
+                        android:text="Recipe Name"
+                        android:textColor="#000000"
+                        android:textSize="50sp" />
+
+
+                    <TextView
+                        android:id="@+id/recipeDetails_recipeDescription_tv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/quicksand_regular"
+                        android:text="Recipe description"
+                        android:textColor="#000000"
+                        android:textSize="25sp" />
+
+                    <TextView
+                        android:id="@+id/recipeDetails_recipeTime_tv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="30dp"
+                        android:fontFamily="@font/quicksand_semibold"
+                        android:text="Total cooking time: "
+                        android:textColor="#000000"
+                        android:textSize="25sp" />
+
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="30dp"
+                        android:fontFamily="@font/quicksand_bold"
+                        android:text="Ingredients:"
+                        android:textColor="#000000"
+                        android:textSize="25sp" />
+
+                    <TextView
+                        android:id="@+id/recipeDetails_recipeIngredients_tv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/quicksand_regular"
+                        android:text="- Ingredient 1\n- Ingredient 2\n- Ingredient 3"
+                        android:textColor="#000000"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="30dp"
+                        android:fontFamily="@font/quicksand_bold"
+                        android:text="Instructions:"
+                        android:textColor="#000000"
+                        android:textSize="25sp" />
+
+                    <TextView
+                        android:id="@+id/recipeDetails_recipeInstructions_tv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/quicksand_regular"
+                        android:text="1. Instruction 1\n2. Instruction 2\n3. Instruction 3\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+                        android:textColor="#000000"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:id="@+id/recipeDetails_recipeNotesTitle_tv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="30dp"
+                        android:fontFamily="@font/quicksand_bold"
+                        android:text="Notes:"
+                        android:textColor="#000000"
+                        android:textSize="25sp" />
+
+                    <TextView
+                        android:id="@+id/recipeDetails_recipeNotes_tv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/quicksand_regular"
+                        android:text="- Note 1\n- Note 2\n- Note 3"
+                        android:textColor="#000000"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:id="@+id/recipeDetails_recipeChef_tv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/quicksand_regular"
+                        android:gravity="center"
+                        android:text="Recipe by &lt;username&gt;"
+                        android:textColor="#3025aa"
+                        android:textSize="15sp"
+                        android:textStyle="italic" />
+
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/recipeDetails_floatingTimer_ll"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|right"
+        android:layout_margin="10dp"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_gravity="bottom|right"
+            android:background="@drawable/bg_timer_circle">
+
+            <ProgressBar
+                android:id="@+id/recipeDetails_floatingTimerProgress_pb"
+                style="@android:style/Widget.ProgressBar.Horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="vertical"
+                android:indeterminate="false"
+                android:progress="0"
+                android:progressDrawable="@drawable/bg_progress_bar"
+                android:visibility="gone" />
 
-                android:padding="5dp">
+            <ImageView
+                android:id="@+id/recipeDetails_floatingTimerIcon_iv"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_gravity="center"
+                android:contentDescription="Timer"
+                android:scaleType="fitCenter"
+                android:src="@drawable/img_timer" />
 
-                <TextView
-                    android:id="@+id/recipeDetails_recipeName_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:autoSizeMaxTextSize="50sp"
-                    android:autoSizeMinTextSize="30sp"
-                    android:autoSizeTextType="uniform"
-                    android:fontFamily="@font/quicksand_bold"
-                    android:maxLines="1"
-                    android:text="Recipe Name"
-                    android:textColor="#000000"
-                    android:textSize="50sp" />
-
-
-                <TextView
-                    android:id="@+id/recipeDetails_recipeDescription_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/quicksand_regular"
-                    android:text="Recipe description"
-                    android:textColor="#000000"
-                    android:textSize="25sp" />
-
-                <TextView
-                    android:id="@+id/recipeDetails_recipeTime_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="30dp"
-                    android:fontFamily="@font/quicksand_semibold"
-                    android:text="Total cooking time: "
-                    android:textColor="#000000"
-                    android:textSize="25sp" />
-
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="30dp"
-                    android:fontFamily="@font/quicksand_bold"
-                    android:text="Ingredients:"
-                    android:textColor="#000000"
-                    android:textSize="25sp" />
-
-                <TextView
-                    android:id="@+id/recipeDetails_recipeIngredients_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/quicksand_regular"
-                    android:text="- Ingredient 1\n- Ingredient 2\n- Ingredient 3"
-                    android:textColor="#000000"
-                    android:textSize="20sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="30dp"
-                    android:fontFamily="@font/quicksand_bold"
-                    android:text="Instructions:"
-                    android:textColor="#000000"
-                    android:textSize="25sp" />
-
-                <TextView
-                    android:id="@+id/recipeDetails_recipeInstructions_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/quicksand_regular"
-                    android:text="1. Instruction 1\n2. Instruction 2\n3. Instruction 3\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-                    android:textColor="#000000"
-                    android:textSize="20sp" />
-
-                <TextView
-                    android:id="@+id/recipeDetails_recipeNotesTitle_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="30dp"
-                    android:fontFamily="@font/quicksand_bold"
-                    android:text="Notes:"
-                    android:textColor="#000000"
-                    android:textSize="25sp" />
-
-                <TextView
-                    android:id="@+id/recipeDetails_recipeNotes_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/quicksand_regular"
-                    android:text="- Note 1\n- Note 2\n- Note 3"
-                    android:textColor="#000000"
-                    android:textSize="20sp" />
-
-                <TextView
-                    android:id="@+id/recipeDetails_suggestedTimer_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="30dp"
-                    android:fontFamily="@font/quicksand_semibold"
-                    android:text="Suggested timer: "
-                    android:textColor="#000000"
-                    android:textSize="20sp" />
-
-                <TextView
-                    android:id="@+id/recipeDetails_recipeChef_tv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/quicksand_regular"
-                    android:gravity="center"
-                    android:text="Recipe by &lt;username&gt;"
-                    android:textColor="#3025aa"
-                    android:textSize="15sp"
-                    android:textStyle="italic" />
-
-            </LinearLayout>
-        </LinearLayout>
-    </ScrollView>
-</LinearLayout>
+            <TextView
+                android:id="@+id/recipeDetails_floatingTimerText_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="5dp"
+                android:fontFamily="@font/quicksand_bold"
+                android:gravity="center"
+                android:text="min"
+                android:textColor="#000000"
+                android:textSize="18sp" />
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>
