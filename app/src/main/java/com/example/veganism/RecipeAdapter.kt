@@ -11,11 +11,11 @@ import com.bumptech.glide.request.RequestOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
-
 class RecipeAdapter(
     private val list: MutableList<Recipe>,
     private val mode: RecipeAdapterMode,
-    private val onItemClick: (Recipe, View, ImageView) -> Unit
+    private val onItemClick: (Recipe, View, ImageView) -> Unit,
+    private val onRecipeUnsaved: ((Recipe, Int) -> Unit)? = null
 ) : RecyclerView.Adapter<RecipeAdapter.ViewHolder>() {
 
     private val auth = FirebaseAuth.getInstance()
@@ -84,6 +84,7 @@ class RecipeAdapter(
                 }
         }
 
+
         holder.bookmark.setOnClickListener {
             if(auth.currentUser == null)
             {
@@ -126,16 +127,13 @@ class RecipeAdapter(
                         db.collection("recipes").document(recipe.id)
                             .update("savesCount", recipe.savesCount)
 
-                        // If the list is in the saved recipes mode then remove the recipe from the list
-                        if (mode == RecipeAdapterMode.SAVED_RECIPES) {
-                            val position = holder.adapterPosition
-                            if (position != RecyclerView.NO_POSITION) {
-                                list.removeAt(position)
-                                notifyItemRemoved(position)
+                        val position = holder.adapterPosition
+                        if (position != RecyclerView.NO_POSITION) {
+                            if (mode == RecipeAdapterMode.SAVED_LIST) {
+                                onRecipeUnsaved?.invoke(recipe, position)
+                            } else {
+                                holder.savesCount.text = recipe.savesCount.toString()
                             }
-                        } else {
-                            holder.savesCount.text = recipe.savesCount.toString()
-                            notifyItemChanged(holder.adapterPosition)
                         }
                     }
                     .addOnFailureListener {
@@ -153,7 +151,6 @@ class RecipeAdapter(
             holder.bookmark.setImageResource(R.drawable.ic_bookmark_unsaved)
         }
     }
-
 
     override fun getItemCount() = list.size
 }

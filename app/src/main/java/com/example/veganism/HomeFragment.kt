@@ -1,5 +1,6 @@
 package com.example.veganism
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -36,6 +37,7 @@ class HomeFragment : Fragment() {
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -48,27 +50,31 @@ class HomeFragment : Fragment() {
         val recipesList: MutableList<Recipe> = mutableListOf()
         val filteredRecipes: MutableList<Recipe> = mutableListOf()
 
-        val adapter = RecipeAdapter(filteredRecipes, RecipeAdapterMode.HOME) { clickedRecipe, recipeBackground, recipeImageView ->
-            val intent = Intent(requireContext(), RecipeDetailsActivity::class.java)
-            intent.putExtra("recipeId", clickedRecipe.id)
+        val adapter = RecipeAdapter(
+            filteredRecipes,
+            RecipeAdapterMode.HOME,
+            onItemClick = { clickedRecipe, recipeBackground, recipeImageView ->
+                val intent = Intent(requireContext(), RecipeDetailsActivity::class.java)
+                intent.putExtra("recipeId", clickedRecipe.id)
 
-            // Create pairs of the View and its Transition Name
-            val pairImage = androidx.core.util.Pair.create<View, String>(
-                recipeImageView, "recipe_image_transition"
-            )
-            val pairBackground = androidx.core.util.Pair.create<View, String>(
-                recipeBackground, "recipe_background_transition"
-            )
+                // Create pairs of the View and its Transition Name
+                val pairImage = androidx.core.util.Pair.create<View, String>(
+                    recipeImageView, "recipe_image_transition"
+                )
+                val pairBackground = androidx.core.util.Pair.create<View, String>(
+                    recipeBackground, "recipe_background_transition"
+                )
 
-            // Pass the pairs into the animation options
-            val options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
-                requireActivity(),
-                pairImage,
-                pairBackground
-            )
+                // Pass the pairs into the animation options
+                val options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
+                    requireActivity(),
+                    pairImage,
+                    pairBackground
+                )
 
-            startActivity(intent, options.toBundle())
-        }
+                startActivity(intent, options.toBundle())
+            }
+        )
 
         db.collection("recipes").get()
             .addOnSuccessListener { result ->
@@ -93,6 +99,7 @@ class HomeFragment : Fragment() {
                 filteredRecipes.addAll(recipesList.filter { it.cookingTimeMinutes <= minutes })
                 adapter.notifyDataSetChanged()
             }
+
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })

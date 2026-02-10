@@ -225,13 +225,8 @@ class RecipeDetailsActivity : AppCompatActivity() {
                                 val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
 
                                 if (vibrator.hasVibrator()) {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                        val effect = VibrationEffect.createWaveform(longArrayOf(0, 500, 500), -1)
-                                        vibrator.vibrate(effect)
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        vibrator.vibrate(longArrayOf(0, 500, 500), -1)
-                                    }
+                                    val effect = VibrationEffect.createWaveform(longArrayOf(0, 500, 500), -1)
+                                    vibrator.vibrate(effect)
                                 }
 
                                 val notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
@@ -247,10 +242,11 @@ class RecipeDetailsActivity : AppCompatActivity() {
                                         dialog.dismiss()
                                     }
                                     .show()
-                            } else { // If the user is not in the app then making a notification
+                            } else {
                                 // If the app is in the background then sending notification
-                                val intent = packageManager.getLaunchIntentForPackage(packageName)!!
+                                val intent = Intent(this@RecipeDetailsActivity, RecipeDetailsActivity::class.java)
                                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                intent.putExtra("recipeId", doc.id)
 
                                 val pendingIntent = PendingIntent.getActivity(
                                     this@RecipeDetailsActivity,
