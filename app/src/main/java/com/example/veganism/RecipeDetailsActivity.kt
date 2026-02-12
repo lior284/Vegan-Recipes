@@ -127,11 +127,17 @@ class RecipeDetailsActivity : AppCompatActivity() {
                         recipeImage.setImageResource(R.drawable.img_recipe_item_example)
                     }
                 assignRecipeData(it)
+                createAndControlTimer(it)
             }
             .addOnFailureListener {
-                // Handle failure
+                // Need to handle failure
             }
     }
+
+    private lateinit var floatingTimer: LinearLayout
+    private lateinit var timerProgress: ProgressBar
+    private lateinit var timerIcon: ImageView
+    private lateinit var timerText: TextView
     fun assignRecipeData(doc: DocumentSnapshot) {
         val recipeName = findViewById<TextView>(R.id.recipeDetails_recipeName_tv)
         val recipeDescription = findViewById<TextView>(R.id.recipeDetails_recipeDescription_tv)
@@ -141,10 +147,10 @@ class RecipeDetailsActivity : AppCompatActivity() {
         val recipeNotesTitle = findViewById<TextView>(R.id.recipeDetails_recipeNotesTitle_tv)
         val recipeNotes = findViewById<TextView>(R.id.recipeDetails_recipeNotes_tv)
 
-        val floatingTimer = findViewById<LinearLayout>(R.id.recipeDetails_floatingTimer_ll)
-        val timerProgress = findViewById<ProgressBar>(R.id.recipeDetails_floatingTimerProgress_pb)
-        val timerIcon = findViewById<ImageView>(R.id.recipeDetails_floatingTimerIcon_iv)
-        val timerText = findViewById<TextView>(R.id.recipeDetails_floatingTimerText_tv)
+        floatingTimer = findViewById(R.id.recipeDetails_floatingTimer_ll)
+        timerProgress = findViewById(R.id.recipeDetails_floatingTimerProgress_pb)
+        timerIcon = findViewById(R.id.recipeDetails_floatingTimerIcon_iv)
+        timerText = findViewById(R.id.recipeDetails_floatingTimerText_tv)
 
         val recipeChef = findViewById<TextView>(R.id.recipeDetails_recipeChef_tv)
 
@@ -177,6 +183,11 @@ class RecipeDetailsActivity : AppCompatActivity() {
             recipeNotes.text = notes
         }
 
+        recipeChef.text = "Recipe by ${doc.getString("chefUsername")}"
+    }
+
+    fun createAndControlTimer(doc: DocumentSnapshot)
+    {
         // If the AI suggested a timer then setting it
         val timerMinutes = (doc.get("timerMinutes") ?: "0").toString().toInt()
         var isTimerRunning = false // For pause/resume functionality
@@ -283,8 +294,6 @@ class RecipeDetailsActivity : AppCompatActivity() {
         } else {
             floatingTimer.visibility = View.GONE
         }
-
-        recipeChef.text = "Recipe by ${doc.getString("chefUsername")}"
     }
     fun changeViewMarginBottom(view: View, newMarginDp: Int)
     {
