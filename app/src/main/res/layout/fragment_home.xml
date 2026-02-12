@@ -37,7 +37,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@drawable/bg_filter_btn"
+            android:background="@drawable/bg_filter_btn_checked"
             android:text="All"
             android:textColor="@color/primaryUI"
             android:textSize="12sp" />
@@ -114,7 +114,7 @@
                 android:layout_gravity="center"
                 android:max="60"
                 android:min="10"
-                android:progress="30"
+                android:progress="60"
                 android:progressBackgroundTint="@color/primaryUI"
                 android:progressTint="@color/indicator"
                 android:thumbTint="@color/primaryUI" />

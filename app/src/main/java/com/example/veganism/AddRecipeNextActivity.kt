@@ -2,6 +2,9 @@ package com.example.veganism
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.SpannableStringBuilder
+import android.text.style.LeadingMarginSpan
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -23,8 +26,7 @@ import kotlinx.coroutines.launch
 class AddRecipeNextActivity : AppCompatActivity() {
 
     val model = GenerativeModel(
-        modelName = "gemini-2.0-flash",
-        apiKey = BuildConfig.GEMINI_API_KEY
+        modelName = "gemini-2.0-flash", apiKey = BuildConfig.GEMINI_API_KEY
     )
 
     private val chat = model.startChat()
@@ -56,15 +58,13 @@ class AddRecipeNextActivity : AppCompatActivity() {
             val user = auth.currentUser
             val store = FirebaseFirestore.getInstance()
 
-            store.collection("users").document(user!!.uid).get()
-                .addOnSuccessListener {
+            store.collection("users").document(user!!.uid).get().addOnSuccessListener {
                     val chefUsername = it.getString("username").toString()
 
                     lifecycleScope.launch {
 
-                        val geminiRecipe = generateGeminiResponse(
-                            etRecipeInfo.text.toString(),
-                            etCookingTime.text.toString()
+                        val geminiRecipe: RecipeParts = generateGeminiResponse(
+                            etRecipeInfo.text.toString(), etCookingTime.text.toString()
                         )
 
                         val recipe = Recipe(
@@ -76,46 +76,59 @@ class AddRecipeNextActivity : AppCompatActivity() {
                             geminiRecipe.ingredients,
                             geminiRecipe.instructions,
                             geminiRecipe.notes,
-                            geminiRecipe.cookingTime
+                            geminiRecipe.cookingTime,
+                            geminiRecipe.timerMinutes
                         )
 
                         val imageUri = recipeImage!!.toUri()
 
-                        store.collection("recipes").add(recipe)
-                            .addOnSuccessListener { document ->
+                        store.collection("recipes").add(recipe).addOnSuccessListener { document ->
                                 val recipeId = document.id
                                 document.update("id", recipeId)
                                 val storage = FirebaseStorage.getInstance()
                                 storage.getReference("recipes_images/$recipeId.jpg")
-                                    .putFile(imageUri)
-                                    .addOnSuccessListener {
+                                    .putFile(imageUri).addOnSuccessListener {
                                         document.update("recipeImage", "$recipeId.jpg")
                                             .addOnSuccessListener {
                                                 hideLoadingOverlay()
-                                                Toast.makeText(this@AddRecipeNextActivity, "Recipe added successfully", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    this@AddRecipeNextActivity,
+                                                    "Recipe added successfully",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
 
-                                                val intent = Intent(this@AddRecipeNextActivity, RecipeDetailsActivity::class.java)
+                                                val intent = Intent(
+                                                    this@AddRecipeNextActivity,
+                                                    RecipeDetailsActivity::class.java
+                                                )
                                                 intent.putExtra("recipeId", recipeId)
                                                 intent.putExtra("fromAddRecipe", true)
                                                 startActivity(intent)
-                                                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                                                overridePendingTransition(
+                                                    android.R.anim.fade_in, android.R.anim.fade_out
+                                                )
 
                                                 finish()
-                                            }
-                                            .addOnFailureListener {
+                                            }.addOnFailureListener {
                                                 hideLoadingOverlay()
-                                                Toast.makeText(this@AddRecipeNextActivity, "Error adding recipe's image", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    this@AddRecipeNextActivity,
+                                                    "Error adding recipe's image",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                     }
-                            }
-                            .addOnFailureListener {
+                            }.addOnFailureListener {
                                 hideLoadingOverlay()
-                                Toast.makeText(this@AddRecipeNextActivity, "Error adding recipe", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@AddRecipeNextActivity,
+                                    "Error adding recipe",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
 
                     }
-                }
-                .addOnFailureListener {
+                }.addOnFailureListener {
                     hideLoadingOverlay()
                     Toast.makeText(this, "Error adding recipe", Toast.LENGTH_LONG).show()
                 }
@@ -123,8 +136,7 @@ class AddRecipeNextActivity : AppCompatActivity() {
     }
 
     private suspend fun generateGeminiResponse(
-        userRecipeInput: String,
-        userTimeInput: String
+        userRecipeInput: String, userTimeInput: String
     ): RecipeParts {
         return try {
             val systemPromptRecipe = """
@@ -132,32 +144,49 @@ class AddRecipeNextActivity : AppCompatActivity() {
                 Your task is to transform this content into a well-structured recipe suitable for display in a recipe application. The output must be friendly, clear, and professional, written in a natural tone similar to recipes found on popular cooking websites.
                 
                 Output Structure:
-                Ingredients – Present a clean, organized list of all ingredients.
-                Instructions – Present a numbered, step-by-step sequence of preparation instructions.
-                Notes (optional) – Include only if relevant.
+                Ingredients – Each ingredient must appear on its own line, separated only by line breaks.
+                Instructions – Each instruction must appear on its own line, separated only by line breaks.
+                Notes (optional) – Each note must appear on its own line, separated only by line breaks.
+                
+                Formatting Rules (VERY IMPORTANT):
+                Do NOT use bullets, dashes, dots, numbers, or any list symbols.
+                Do NOT prefix lines with "-", "•", ".", or numbers.
+                Use ONLY plain text with line breaks (\\n) to separate lines.
                 
                 Instruction Guidelines:
-                Combine closely related actions into a single step (for example, adding an ingredient and cooking it should appear in the same instruction).
+                Combine closely related actions into a single instruction.
                 When two verbs appear together, separate them clearly (for example, write “Add the mushrooms and cook for 5 minutes,” not “Add and cook the mushrooms for 5 minutes”).
-                Refer to ingredients using “the” once they have been introduced (for example, “Add the onions,” not “Add onions”).
+                Refer to ingredients using “the” once they have been introduced.
                 Ensure the instructions are friendly, concise, professional, and easy to follow.
                 Remove any non-recipe content, including promotions, advertisements, personal commentary, branding, or external references.
-
-                Notes Guidelines:                    
-                The Notes section may include helpful opinions, variations, tips, or serving suggestions.
-                Do not include unnecessary or trivial statements such as “The dish is ready!” or “You have created a pasta.”
-                Only include notes that add real value to understanding, preparing, or serving the recipe.
+                
+                Notes Guidelines:
+                Include notes only if they add real value such as tips, variations, or serving suggestions.
+                Do not include unnecessary or trivial statements.
+                Each note must be written on its own line without bullets or numbering.
                 
                 Only include content directly related to the recipe itself.
                 
-                Formatting Requirement
+                Section Markers:
                 You must separate each section using the following exact markers on their own lines:
                 [[INGREDIENTS]]
                 [[INSTRUCTIONS]]
                 [[NOTES]] (only if notes exist)
-
-                Do not write anything outside these sections.
+                
+                Timer Requirement (VERY IMPORTANT):
+                If any instruction requires waiting, baking, simmering, resting, or cooking for a specific duration,
+                you MUST calculate the total required time in minutes by summing all such durations mentioned in the instructions
+                and include it using this exact format at the very end of the response:
+                
+                [[TIMER]]
+                <number>
+                
+                If no timing is required, write:
+                
+                [[TIMER]]
+                0
                 """.trimIndent()
+
             val systemPromptTime = """
                 You will be given a single string representing a duration of time. The input may contain numbers, symbols, or words, and may be written in various formats.
                     
@@ -199,7 +228,6 @@ class AddRecipeNextActivity : AppCompatActivity() {
                 90 -> 90
                 """.trimIndent()
 
-
             val recipeSectionsResponse =
                 model.generateContent("$systemPromptRecipe\n\nUser input:\n$userRecipeInput").text.toString()
             val cookingTimeResponse =
@@ -212,7 +240,7 @@ class AddRecipeNextActivity : AppCompatActivity() {
             parseRecipe(recipeSectionsResponse, cookingTimeResponse)
         } catch (e: Exception) {
             Log.e("GeminiError", e.message ?: "Unknown error")
-            RecipeParts("", "", "", 0)
+            RecipeParts("","", "", 0 ,0)
         }
     }
 
@@ -220,12 +248,13 @@ class AddRecipeNextActivity : AppCompatActivity() {
         val ingredients: String,
         val instructions: String,
         val notes: String,
-        val cookingTime: Int
+        val cookingTime: Int,
+        val timerMinutes: Int
     )
 
     fun parseRecipe(recipeSectionsResponse: String, cookingTimeResponse: String): RecipeParts {
         if (recipeSectionsResponse == "No response from Gemini.") {
-            return RecipeParts("", "", "", 0)
+            return RecipeParts("", "", "", 0, 0)
         }
 
         val ingredients = recipeSectionsResponse
@@ -236,32 +265,28 @@ class AddRecipeNextActivity : AppCompatActivity() {
         val instructions = recipeSectionsResponse
             .substringAfter("[[INSTRUCTIONS]]")
             .substringBefore("[[NOTES]]")
+            .substringBefore("[[TIMER]]")
             .trim()
 
         val notes = if (recipeSectionsResponse.contains("[[NOTES]]")) {
-            recipeSectionsResponse.substringAfter("[[NOTES]]").trim()
+            recipeSectionsResponse
+                .substringAfter("[[NOTES]]")
+                .substringBefore("[[TIMER]]")
+                .trim()
         } else {
             ""
         }
 
-        return RecipeParts(ingredients, instructions, notes, cookingTimeResponse.trim().toInt())
-    }
-
-    fun formatWithDots(text: String): String {
-        return text
+        val timerMinutes = recipeSectionsResponse
+            .substringAfter("[[TIMER]]")
+            .trim()
             .lines()
-            .filter { it.isNotBlank() }
-            .joinToString("\n") { "• $it" }
-    }
+            .firstOrNull()
+            ?.toIntOrNull() ?: 0
 
-    fun formatWithNumbers(text: String): String {
-        return text
-            .lines()
-            .filter { it.isNotBlank() }
-            .mapIndexed { index, line ->
-                "${index + 1}. $line"
-            }
-            .joinToString("\n")
+        val cookingTime = cookingTimeResponse.trim().toIntOrNull() ?: 0
+
+        return RecipeParts(ingredients, instructions, notes, cookingTime, timerMinutes)
     }
 
     fun showLoadingOverlay() {

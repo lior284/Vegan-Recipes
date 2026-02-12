@@ -1,5 +1,6 @@
 package com.example.veganism
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -36,26 +37,44 @@ class HomeFragment : Fragment() {
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_home, container, false)
 
-        val minutesFilter = view.findViewById<SeekBar>(R.id.homeFragment_minutesFilter_sb)
-        minutesFilter.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val minutes = progress
-                // TODO: Filter recipes by minutes
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
         val recycler = view.findViewById<RecyclerView>(R.id.homeFragment_recipes_rv)
         recycler.layoutManager = LinearLayoutManager(requireContext())
         val db = Firebase.firestore
         val recipesList: MutableList<Recipe> = mutableListOf()
+        val filteredRecipes: MutableList<Recipe> = mutableListOf()
+
+        val adapter = RecipeAdapter(
+            filteredRecipes,
+            RecipeAdapterMode.HOME,
+            onItemClick = { clickedRecipe, recipeBackground, recipeImageView ->
+                val intent = Intent(requireContext(), RecipeDetailsActivity::class.java)
+                intent.putExtra("recipeId", clickedRecipe.id)
+
+                // Create pairs of the View and its Transition Name
+                val pairImage = androidx.core.util.Pair.create<View, String>(
+                    recipeImageView, "recipe_image_transition"
+                )
+                val pairBackground = androidx.core.util.Pair.create<View, String>(
+                    recipeBackground, "recipe_background_transition"
+                )
+
+                // Pass the pairs into the animation options
+                val options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
+                    requireActivity(),
+                    pairImage,
+                    pairBackground
+                )
+
+                startActivity(intent, options.toBundle())
+            }
+        )
 
         db.collection("recipes").get()
             .addOnSuccessListener { result ->
@@ -63,28 +82,27 @@ class HomeFragment : Fragment() {
                     val recipe = item.toObject(Recipe::class.java)
                     recipesList.add(recipe)
                 }
-                recycler.adapter = RecipeAdapter(recipesList, RecipeAdapterMode.HOME) { clickedRecipe, recipeBackground, recipeImageView ->
-                    val intent = Intent(requireContext(), RecipeDetailsActivity::class.java)
-                    intent.putExtra("recipeId", clickedRecipe.id)
 
-                    // Create pairs of the View and its Transition Name
-                    val pairImage = androidx.core.util.Pair.create<View, String>(
-                        recipeImageView, "recipe_image_transition"
-                    )
-                    val pairBackground = androidx.core.util.Pair.create<View, String>(
-                        recipeBackground, "recipe_background_transition"
-                    )
+                // Initially show all recipes
+                filteredRecipes.clear()
+                filteredRecipes.addAll(recipesList)
+                adapter.notifyDataSetChanged()
 
-                    // Pass the pairs into the animation options
-                    val options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
-                        requireActivity(),
-                        pairImage,
-                        pairBackground
-                    )
-
-                    startActivity(intent, options.toBundle())
-                }
+                recycler.adapter = adapter
             }
+
+        val minutesFilter = view.findViewById<SeekBar>(R.id.homeFragment_minutesFilter_sb)
+        minutesFilter.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val minutes = progress
+                filteredRecipes.clear()
+                filteredRecipes.addAll(recipesList.filter { it.cookingTimeMinutes <= minutes })
+                adapter.notifyDataSetChanged()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
 
         return view
     }

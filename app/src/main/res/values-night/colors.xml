@@ -5,4 +5,6 @@
     <color name="indicator">#0A4F4A</color>
     <color name="bookmarkSave">#1769AA</color>
     <color name="scTrackTint">#cccccc</color>
+    <color name="timerBg">#994911</color>
+    <color name="timerProgressBar">#8c1d15</color>
 </resources>

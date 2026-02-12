@@ -11,11 +11,9 @@
     <ImageView
         android:id="@+id/recipeItem_recipeImage_iv"
         android:transitionName="recipe_image_transition"
-        android:layout_width="wrap_content"
+        android:layout_width="120dp"
         android:layout_height="match_parent"
         android:adjustViewBounds="true"
-        android:background="@drawable/bg_image"
-        android:clipToOutline="true"
         android:scaleType="centerCrop"
         android:src="@drawable/img_recipe_item_example" />
 

@@ -9,7 +9,8 @@ class Recipe (
     var ingredients: String = "",
     var instructions: String = "",
     var notes: String = "",
-    var cookingTimeMinutes: Int = 0, // The int represents the number of minutes
+    var cookingTimeMinutes: Int = 0,
+    var timerMinutes: Int = 0,
     var isSaved: Boolean = false,
     var savesCount: Int = 0
 )
