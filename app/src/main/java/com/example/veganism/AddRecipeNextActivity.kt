@@ -77,6 +77,7 @@ class AddRecipeNextActivity : AppCompatActivity() {
                             geminiRecipe.instructions,
                             geminiRecipe.notes,
                             geminiRecipe.cookingTime,
+                            geminiRecipe.mealType.name,
                             geminiRecipe.timerMinutes
                         )
 
@@ -153,6 +154,16 @@ class AddRecipeNextActivity : AppCompatActivity() {
                 Do NOT prefix lines with "-", "•", ".", or numbers.
                 Use ONLY plain text with line breaks (\\n) to separate lines.
                 
+                Meal Type Guidelines:
+                Decide the recipe’s meal type based on ingredients and typical serving time. You must choose only one:
+                BREAKFAST – foods usually eaten in the morning
+                LUNCH – midday meals
+                DINNER – main evening meals
+                OTHER – desserts, snacks, sauces, sides, drinks, or anything that doesn’t fit the above.
+                Output exactly one value in ALL CAPS.
+                Do not add explanations or extra words.
+                Include this section at the very top of the response, before [[INGREDIENTS]].
+                
                 Instruction Guidelines:
                 Combine closely related actions into a single instruction.
                 When two verbs appear together, separate them clearly (for example, write “Add the mushrooms and cook for 5 minutes,” not “Add and cook the mushrooms for 5 minutes”).
@@ -169,13 +180,14 @@ class AddRecipeNextActivity : AppCompatActivity() {
                 
                 Section Markers:
                 You must separate each section using the following exact markers on their own lines:
+                [[MEAL_TYPE]]
                 [[INGREDIENTS]]
                 [[INSTRUCTIONS]]
                 [[NOTES]] (only if notes exist)
                 
                 Timer Requirement (VERY IMPORTANT):
                 If any instruction requires waiting, baking, simmering, resting, or cooking for a specific duration,
-                you MUST calculate the total required time in minutes by summing all such durations mentioned in the instructions
+                you MUST find the highest required time in minutes for a specific instruction by searching all such durations mentioned in the instructions
                 and include it using this exact format at the very end of the response:
                 
                 [[TIMER]]
@@ -240,7 +252,7 @@ class AddRecipeNextActivity : AppCompatActivity() {
             parseRecipe(recipeSectionsResponse, cookingTimeResponse)
         } catch (e: Exception) {
             Log.e("GeminiError", e.message ?: "Unknown error")
-            RecipeParts("","", "", 0 ,0)
+            RecipeParts("","", "", 0, MealType.OTHER ,0)
         }
     }
 
@@ -249,12 +261,13 @@ class AddRecipeNextActivity : AppCompatActivity() {
         val instructions: String,
         val notes: String,
         val cookingTime: Int,
+        val mealType: MealType,
         val timerMinutes: Int
     )
 
     fun parseRecipe(recipeSectionsResponse: String, cookingTimeResponse: String): RecipeParts {
         if (recipeSectionsResponse == "No response from Gemini.") {
-            return RecipeParts("", "", "", 0, 0)
+            return RecipeParts("", "", "", 0, MealType.OTHER, 0)
         }
 
         val ingredients = recipeSectionsResponse
@@ -277,6 +290,20 @@ class AddRecipeNextActivity : AppCompatActivity() {
             ""
         }
 
+        val cookingTime = cookingTimeResponse.trim().toIntOrNull() ?: 0
+
+        val mealTypeString = recipeSectionsResponse
+            .substringAfter("[[MEAL_TYPE]]", "")
+            .substringBefore("[[INGREDIENTS]]", "")
+            .trim()
+            .uppercase() // Ensuring the meal type is in uppercase
+
+        val mealType: MealType = try {
+            MealType.valueOf(mealTypeString)
+        } catch (e: Exception) {
+            MealType.OTHER
+        }
+
         val timerMinutes = recipeSectionsResponse
             .substringAfter("[[TIMER]]")
             .trim()
@@ -284,9 +311,8 @@ class AddRecipeNextActivity : AppCompatActivity() {
             .firstOrNull()
             ?.toIntOrNull() ?: 0
 
-        val cookingTime = cookingTimeResponse.trim().toIntOrNull() ?: 0
 
-        return RecipeParts(ingredients, instructions, notes, cookingTime, timerMinutes)
+        return RecipeParts(ingredients, instructions, notes, cookingTime, mealType, timerMinutes)
     }
 
     fun showLoadingOverlay() {

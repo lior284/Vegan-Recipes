@@ -37,6 +37,13 @@ class HomeFragment : Fragment() {
         }
     }
 
+    private var currentMealType: MealType? = null // Null means ALL
+    private var currentMaxRecipeMinutes: Int = 60 // The max minutes in the seek bar
+
+    private val recipesList: MutableList<Recipe> = mutableListOf()
+    private val filteredRecipes: MutableList<Recipe> = mutableListOf()
+    private lateinit var adapter: RecipeAdapter
+
     @SuppressLint("NotifyDataSetChanged")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,13 +51,19 @@ class HomeFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_home, container, false)
 
+        val filterAll = view.findViewById<Button>(R.id.homeFragment_filterAll_btn)
+        val filterBreakfast = view.findViewById<Button>(R.id.homeFragment_filterBreakfast_btn)
+        val filterLunch = view.findViewById<Button>(R.id.homeFragment_filterLunch_btn)
+        val filterDinner = view.findViewById<Button>(R.id.homeFragment_filterDinner_btn)
+        val filterOther = view.findViewById<Button>(R.id.homeFragment_filterOther_btn)
+
+        val minutesFilter = view.findViewById<SeekBar>(R.id.homeFragment_minutesFilter_sb)
+
         val recycler = view.findViewById<RecyclerView>(R.id.homeFragment_recipes_rv)
         recycler.layoutManager = LinearLayoutManager(requireContext())
         val db = Firebase.firestore
-        val recipesList: MutableList<Recipe> = mutableListOf()
-        val filteredRecipes: MutableList<Recipe> = mutableListOf()
 
-        val adapter = RecipeAdapter(
+        adapter = RecipeAdapter(
             filteredRecipes,
             RecipeAdapterMode.HOME,
             onItemClick = { clickedRecipe, recipeBackground, recipeImageView ->
@@ -91,13 +104,36 @@ class HomeFragment : Fragment() {
                 recycler.adapter = adapter
             }
 
-        val minutesFilter = view.findViewById<SeekBar>(R.id.homeFragment_minutesFilter_sb)
+        filterAll.setOnClickListener {
+            currentMealType = null
+            applyFilters()
+        }
+
+        filterBreakfast.setOnClickListener {
+            currentMealType = MealType.BREAKFAST
+            applyFilters()
+        }
+
+        filterLunch.setOnClickListener {
+            currentMealType = MealType.LUNCH
+            applyFilters()
+        }
+
+        filterDinner.setOnClickListener {
+            currentMealType = MealType.DINNER
+            applyFilters()
+        }
+
+        filterOther.setOnClickListener {
+            currentMealType = MealType.OTHER
+            applyFilters()
+        }
+
         minutesFilter.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val minutes = progress
-                filteredRecipes.clear()
-                filteredRecipes.addAll(recipesList.filter { it.cookingTimeMinutes <= minutes })
-                adapter.notifyDataSetChanged()
+                currentMaxRecipeMinutes = minutes
+                applyFilters()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -105,6 +141,19 @@ class HomeFragment : Fragment() {
         })
 
         return view
+    }
+
+    private fun applyFilters()
+    {
+        filteredRecipes.clear()
+        filteredRecipes.addAll(
+            recipesList.filter { recipe ->
+                val mealTypeMatches = currentMealType == null || currentMealType!!.name == recipe.mealType
+                val timeMatches = recipe.cookingTimeMinutes <= currentMaxRecipeMinutes
+                mealTypeMatches && timeMatches
+            }
+        )
+        adapter.notifyDataSetChanged()
     }
 
     companion object {
