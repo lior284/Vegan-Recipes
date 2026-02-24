@@ -17,6 +17,7 @@
         android:textSize="60sp" />
 
     <EditText
+        android:id="@+id/homeFragment_searchBar_et"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
