@@ -47,8 +47,10 @@ class SavedRecipesActivity : AppCompatActivity() {
                             recipesList.add(recipe!!)
                             count++
                             if (count == result.size()) {
-                                recycler.adapter =
-                                    RecipeAdapter(recipesList, RecipeAdapterMode.SAVED_RECIPES) { clickedRecipe, recipeBackground, recipeImageView ->
+                                recycler.adapter = RecipeAdapter(
+                                    recipesList,
+                                    RecipeAdapterMode.SAVED_LIST,
+                                    onItemClick = { clickedRecipe, recipeBackground, recipeImageView ->
                                         val intent = Intent(this, RecipeDetailsActivity::class.java)
                                         intent.putExtra("recipeId", clickedRecipe.id)
 
@@ -69,7 +71,12 @@ class SavedRecipesActivity : AppCompatActivity() {
                                             )
 
                                         startActivity(intent, options.toBundle())
+                                    },
+                                    onRecipeUnsaved = { _, position ->
+                                        recipesList.removeAt(position)
+                                        recycler.adapter?.notifyItemRemoved(position)
                                     }
+                                )
                             }
                         }
                 }
