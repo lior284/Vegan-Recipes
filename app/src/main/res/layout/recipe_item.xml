@@ -15,6 +15,7 @@
         android:layout_height="match_parent"
         android:adjustViewBounds="true"
         android:scaleType="centerCrop"
+        android:cropToPadding="true"
         android:src="@drawable/img_recipe_item_example" />
 
     <LinearLayout
