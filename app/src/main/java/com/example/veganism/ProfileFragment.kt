@@ -160,8 +160,7 @@ class ProfileFragment : Fragment() {
         etFullName.text = "$firstName $lastName"
 
         val userUID = prefs.getString("userUID", "")
-        val userPrefs = requireContext().getSharedPreferences("settings_$userUID", Context.MODE_PRIVATE)
-        scDarkMode.isChecked = userPrefs.getBoolean("darkMode", false)
+        scDarkMode.isChecked = SettingsManager.isDarkModeEnabled(requireContext(), userUID.orEmpty())
 
         tvUserDetails.setOnClickListener {
             startActivity(Intent(requireContext(), UserDetailsActivity::class.java))
@@ -173,15 +172,13 @@ class ProfileFragment : Fragment() {
 
         scDarkMode.setOnCheckedChangeListener { _, isChecked ->
             scDarkMode.postDelayed({
-                    userPrefs.edit().putBoolean("darkMode", isChecked).apply()
-
-                    AppCompatDelegate.setDefaultNightMode(
-                        if (isChecked)
-                            AppCompatDelegate.MODE_NIGHT_YES
-                        else
-                            AppCompatDelegate.MODE_NIGHT_NO
-                    )
+                    SettingsManager.setDarkModeEnabled(requireContext(), userUID.orEmpty(), isChecked)
+                    SettingsManager.applySettings(requireContext(), userUID.orEmpty())
                 }, 175)
+        }
+
+        tvNotifications.setOnClickListener {
+            startActivity(Intent(requireContext(), NotificationsSettingsActivity::class.java))
         }
 
         tvSignOut.setOnClickListener {
@@ -201,7 +198,7 @@ class ProfileFragment : Fragment() {
                     startActivity(Intent(requireContext(), StartPageActivity::class.java))
                     requireActivity().finish()
 
-                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+                    SettingsManager.applyDefaultSettings()
 
                     activity?.finish()
                 }

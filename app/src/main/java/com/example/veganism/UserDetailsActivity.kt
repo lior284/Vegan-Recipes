@@ -1,11 +1,11 @@
 package com.example.veganism
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.widget.*
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -136,9 +136,16 @@ class UserDetailsActivity : AppCompatActivity() {
         }
 
 
+        val backCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                handleBackPressed(this)
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, backCallback)
+
         val backBtn = findViewById<TextView>(R.id.userDetails_backArrow_iv)
         backBtn.setOnClickListener {
-            onBackPressed()
+            handleBackPressed(backCallback)
         }
 
         val btnReset = findViewById<Button>(R.id.userDetails_reset_btn)
@@ -172,18 +179,20 @@ class UserDetailsActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("GestureBackNavigation")
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
+    private fun handleBackPressed(backCallback: OnBackPressedCallback) {
         if (madeChanges()) {
             AlertDialog.Builder(this)
                 .setTitle("Discard Changes?")
                 .setMessage("You have unsaved changes. Are you sure you want to discard them?")
-                .setPositiveButton("Yes") { _, _ -> super.onBackPressed() }
+                .setPositiveButton("Yes") { _, _ ->
+                    backCallback.isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
                 .setNegativeButton("No", null)
                 .show()
         } else {
-            super.onBackPressed()
+            backCallback.isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
         }
     }
 

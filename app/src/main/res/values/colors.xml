@@ -7,4 +7,7 @@
     <color name="scTrackTint">#555555</color>
     <color name="timerBg">#fe7e23</color>
     <color name="timerProgressBar">#e0372b</color>
+    <color name="hintText">#5E5E5E</color>
+    <color name="slotBg">#F5F5F5</color>
+    <color name="disabledSettingText">#9A9A9A</color>
 </resources>

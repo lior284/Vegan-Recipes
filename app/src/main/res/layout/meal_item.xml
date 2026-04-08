@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_card"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:id="@+id/mealItem_dayTitle_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/quicksand_bold"
+        android:text="EEE, MMM d"
+        android:textColor="@color/primaryUI"
+        android:textSize="18sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:weightSum="3">
+
+        <!-- Breakfast -->
+        <LinearLayout
+            android:id="@+id/mealItem_breakfastSlot_ll"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_slot"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/mealItem_breakfastTitle_tv"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:autoSizeMaxTextSize="20sp"
+                android:autoSizeMinTextSize="12sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:ellipsize="end"
+                android:fontFamily="@font/quicksand_regular"
+                android:gravity="center"
+                android:maxLines="2"
+                android:textAlignment="center"
+                android:text="Empty"
+                android:textColor="@color/primaryUI"
+                android:textSize="20sp" />
+
+            <ImageView
+                android:id="@+id/mealItem_breakfastImage_iv"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginTop="6dp"
+                android:cropToPadding="true"
+                android:scaleType="centerCrop"
+                android:src="@drawable/img_recipe_item_example"
+                android:transitionName="recipe_image_transition"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Lunch -->
+        <LinearLayout
+            android:id="@+id/mealItem_lunchSlot_ll"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="5dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_slot"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/mealItem_lunchTitle_tv"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:autoSizeMaxTextSize="20sp"
+                android:autoSizeMinTextSize="12sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:ellipsize="end"
+                android:fontFamily="@font/quicksand_regular"
+                android:gravity="center"
+                android:maxLines="2"
+                android:textAlignment="center"
+                android:text="Empty"
+                android:textColor="@color/primaryUI"
+                android:textSize="20sp" />
+
+            <ImageView
+                android:id="@+id/mealItem_lunchImage_iv"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginTop="6dp"
+                android:cropToPadding="true"
+                android:scaleType="centerCrop"
+                android:src="@drawable/img_recipe_item_example"
+                android:transitionName="recipe_image_transition"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Dinner -->
+        <LinearLayout
+            android:id="@+id/mealItem_dinnerSlot_ll"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_slot"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/mealItem_dinnerTitle_tv"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:autoSizeMaxTextSize="20sp"
+                android:autoSizeMinTextSize="12sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:ellipsize="end"
+                android:fontFamily="@font/quicksand_regular"
+                android:gravity="center"
+                android:maxLines="2"
+                android:textAlignment="center"
+                android:text="Empty"
+                android:textColor="@color/primaryUI"
+                android:textSize="20sp" />
+
+            <ImageView
+                android:id="@+id/mealItem_dinnerImage_iv"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginTop="6dp"
+                android:cropToPadding="true"
+                android:scaleType="centerCrop"
+                android:src="@drawable/img_recipe_item_example"
+                android:transitionName="recipe_image_transition"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

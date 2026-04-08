@@ -16,7 +16,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.cardview.widget.CardView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -110,7 +109,9 @@ class StartPageActivity : AppCompatActivity() {
         }
 
         val cvImageSwitcher = findViewById<CardView>(R.id.startPage_isView_cv)
-        if(AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES) {
+        if (getResources().configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        ) {
             cvImageSwitcher.alpha = 0.7f
         } else {
             cvImageSwitcher.alpha = 1.0f
@@ -162,16 +163,7 @@ class StartPageActivity : AppCompatActivity() {
     }
 
     private fun loadUserSettingsFromPrefs(uid: String) {
-        val userPrefs = getSharedPreferences("settings_$uid", MODE_PRIVATE)
-
-        val darkMode = userPrefs.getBoolean("darkMode", false)
-        AppCompatDelegate.setDefaultNightMode(
-            if (darkMode)
-                AppCompatDelegate.MODE_NIGHT_YES
-            else
-                AppCompatDelegate.MODE_NIGHT_NO
-        )
-        // Will add here notifications settings
+        SettingsManager.applySettings(this, uid)
     }
 
     fun showLoadingOverlay() {
