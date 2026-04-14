@@ -22,12 +22,19 @@ import androidx.core.widget.TextViewCompat
 
 class NotificationsSettingsActivity : AppCompatActivity() {
     private lateinit var userUid: String
+    private var isUpdatingSwitchState = false
+    private var pendingNotificationSwitch: SwitchCompat? = null
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (!isGranted) {
+            isUpdatingSwitchState = true
+            pendingNotificationSwitch?.isChecked = false
+            isUpdatingSwitchState = false
             Toast.makeText(this, "Please enable notifications permission.", Toast.LENGTH_LONG).show()
         }
+        pendingNotificationSwitch = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,6 +89,7 @@ class NotificationsSettingsActivity : AppCompatActivity() {
         updateMealNotificationState(tvLunchNotifications, scLunchNotifications, tvLunchHour, scWeekPlanNotifications.isChecked)
         updateMealNotificationState(tvDinnerNotifications, scDinnerNotifications, tvDinnerHour, scWeekPlanNotifications.isChecked)
 
+        // If the user wants to change the hour of the notifications
         tvBreakfastHour.setOnClickListener {
             if (tvBreakfastHour.isEnabled) {
                 showTimePicker(tvBreakfastHour) { selectedTime ->
@@ -109,15 +117,21 @@ class NotificationsSettingsActivity : AppCompatActivity() {
             }
         }
 
+        // If the user wants to enable/disable notifications
         scTimerNotifications.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                requestNotificationPermissionIfNeeded()
+            if (isUpdatingSwitchState) return@setOnCheckedChangeListener
+
+            if (isChecked && !hasNotificationPermission()) {
+                pendingNotificationSwitch = scTimerNotifications
+                requestNotificationPermission()
             }
+
             SettingsManager.setTimerNotificationsEnabled(this, userUid, isChecked)
         }
 
         scWeekPlanNotifications.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
+                pendingNotificationSwitch = scWeekPlanNotifications
                 requestNotificationPermissionIfNeeded()
             }
             updateMealNotificationState(tvBreakfastNotifications, scBreakfastNotifications, tvBreakfastHour, isChecked)
@@ -128,30 +142,26 @@ class NotificationsSettingsActivity : AppCompatActivity() {
         }
 
         scBreakfastNotifications.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                requestNotificationPermissionIfNeeded()
+            applyMealNotificationState(isChecked, tvBreakfastHour, scWeekPlanNotifications.isChecked) {
+                SettingsManager.setBreakfastNotificationsEnabled(this, userUid, it)
             }
-            updateHourState(tvBreakfastHour, isChecked && scWeekPlanNotifications.isChecked)
-            SettingsManager.setBreakfastNotificationsEnabled(this, userUid, isChecked)
-            MealPlanNotificationManager.rescheduleWeekPlanNotifications(this, userUid)
         }
 
         scLunchNotifications.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                requestNotificationPermissionIfNeeded()
+            applyMealNotificationState(isChecked, tvLunchHour, scWeekPlanNotifications.isChecked) {
+                SettingsManager.setLunchNotificationsEnabled(this, userUid, it)
             }
-            updateHourState(tvLunchHour, isChecked && scWeekPlanNotifications.isChecked)
-            SettingsManager.setLunchNotificationsEnabled(this, userUid, isChecked)
-            MealPlanNotificationManager.rescheduleWeekPlanNotifications(this, userUid)
         }
+        /*
+        Added if the user doesn't have notification permission enabled when turning the timer switch then asking for permission
+        and there is a whole flow behind it.
+        Need to add it for the week plan switch as well.
+         */
 
         scDinnerNotifications.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                requestNotificationPermissionIfNeeded()
+            applyMealNotificationState(isChecked, tvDinnerHour, scWeekPlanNotifications.isChecked) {
+                SettingsManager.setDinnerNotificationsEnabled(this, userUid, it)
             }
-            updateHourState(tvDinnerHour, isChecked && scWeekPlanNotifications.isChecked)
-            SettingsManager.setDinnerNotificationsEnabled(this, userUid, isChecked)
-            MealPlanNotificationManager.rescheduleWeekPlanNotifications(this, userUid)
         }
     }
 
@@ -217,6 +227,37 @@ class NotificationsSettingsActivity : AppCompatActivity() {
     private fun getNotificationTextColor(isEnabled: Boolean): Int {
         val colorRes = if (isEnabled) R.color.primaryUI else R.color.disabledSettingText
         return ContextCompat.getColor(this, colorRes)
+    }
+
+    private fun applyMealNotificationState(
+        isChecked: Boolean,
+        hourView: TextView,
+        isWeekPlanEnabled: Boolean,
+        saveSetting: (Boolean) -> Unit
+    ) {
+        updateHourState(hourView, isChecked && isWeekPlanEnabled)
+        saveSetting(isChecked)
+        MealPlanNotificationManager.rescheduleWeekPlanNotifications(this, userUid)
+    }
+
+
+
+
+    private fun hasNotificationPermission(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return true
+        }
+
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {
