@@ -119,13 +119,10 @@ class NotificationsSettingsActivity : AppCompatActivity() {
 
         // If the user wants to enable/disable notifications
         scTimerNotifications.setOnCheckedChangeListener { _, isChecked ->
-            if (isUpdatingSwitchState) return@setOnCheckedChangeListener
-
-            if (isChecked && !hasNotificationPermission()) {
+            if (isChecked) {
                 pendingNotificationSwitch = scTimerNotifications
-                requestNotificationPermission()
+                requestNotificationPermissionIfNeeded()
             }
-
             SettingsManager.setTimerNotificationsEnabled(this, userUid, isChecked)
         }
 
@@ -152,11 +149,6 @@ class NotificationsSettingsActivity : AppCompatActivity() {
                 SettingsManager.setLunchNotificationsEnabled(this, userUid, it)
             }
         }
-        /*
-        Added if the user doesn't have notification permission enabled when turning the timer switch then asking for permission
-        and there is a whole flow behind it.
-        Need to add it for the week plan switch as well.
-         */
 
         scDinnerNotifications.setOnCheckedChangeListener { _, isChecked ->
             applyMealNotificationState(isChecked, tvDinnerHour, scWeekPlanNotifications.isChecked) {
@@ -242,23 +234,6 @@ class NotificationsSettingsActivity : AppCompatActivity() {
 
 
 
-
-    private fun hasNotificationPermission(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            return true
-        }
-
-        return ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
 
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {

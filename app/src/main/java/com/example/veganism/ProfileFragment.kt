@@ -71,7 +71,7 @@ class ProfileFragment : Fragment() {
         val tvSavedRecipes = view.findViewById<TextView>(R.id.profileFragment_savedRecipes_tv)
         val scDarkMode = view.findViewById<SwitchCompat>(R.id.profileFragment_darkMode_sc)
         val tvNotifications = view.findViewById<TextView>(R.id.profileFragment_notifications_tv)
-        val tvHelpAndContact = view.findViewById<TextView>(R.id.profileFragment_helpAndContact_tv)
+        val tvAbout = view.findViewById<TextView>(R.id.profileFragment_about_tv)
         val tvSignOut = view.findViewById<TextView>(R.id.profileFragment_signOut_tv)
 
         val savedBase64 = prefs.getString("profilePicture", null)
@@ -179,6 +179,10 @@ class ProfileFragment : Fragment() {
 
         tvNotifications.setOnClickListener {
             startActivity(Intent(requireContext(), NotificationsSettingsActivity::class.java))
+        }
+
+        tvAbout.setOnClickListener {
+            startActivity(Intent(requireContext(), AboutActivity::class.java))
         }
 
         tvSignOut.setOnClickListener {

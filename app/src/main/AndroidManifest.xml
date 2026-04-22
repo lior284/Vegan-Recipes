@@ -20,6 +20,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Veganism">
         <activity
+            android:name=".AboutActivity"
+            android:exported="false" />
+        <activity
             android:name=".NotificationsSettingsActivity"
             android:exported="false" />
         <activity
@@ -52,7 +55,9 @@
         <activity
             android:name=".MenuActivity"
             android:exported="true" />
-        <receiver android:name=".MealPlanNotificationReceiver"
+
+        <receiver
+            android:name=".MealPlanNotificationReceiver"
             android:exported="false" />
     </application>
 
