@@ -61,16 +61,16 @@
                     android:textColor="@color/primaryUI" />
 
                 <TextView
-                    android:id="@+id/homePage_AIChat_tv"
+                    android:id="@+id/homePage_WeekPlan_tv"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:clickable="true"
-                    android:drawableTop="@drawable/ic_chat"
+                    android:drawableTop="@drawable/ic_calendar"
                     android:fontFamily="@font/quicksand_semibold"
                     android:gravity="center"
                     android:padding="10dp"
-                    android:text="AI chat"
+                    android:text="Week Plan"
                     android:textColor="@color/primaryUI" />
 
                 <TextView

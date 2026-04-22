@@ -1,5 +1,6 @@
 package com.example.veganism
 
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -17,11 +18,15 @@ import android.text.SpannableStringBuilder
 import android.text.style.LeadingMarginSpan
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
@@ -29,22 +34,30 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class RecipeDetailsActivity : AppCompatActivity() {
 
     private lateinit var timerReceiver: BroadcastReceiver
+    private var isFromAddRecipe = false
+    private var isFromNotification = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val isFromAddRecipe = intent.getBooleanExtra("fromAddRecipe", false)
+        isFromAddRecipe = intent.getBooleanExtra("fromAddRecipe", false)
+        isFromNotification = intent.getBooleanExtra("fromNotification", false)
 
-        if (!isFromAddRecipe) {
-            supportPostponeEnterTransition() // Only postpone if the user came from the list of recipes and not from the add recipe
+        if (!isFromAddRecipe && !isFromNotification) {
+            supportPostponeEnterTransition() // Only postpone if the user came from the list of recipes and not from the add recipe or notification
         }
 
         setContentView(R.layout.activity_recipe_details)
@@ -55,22 +68,13 @@ class RecipeDetailsActivity : AppCompatActivity() {
         }
         createNotificationChannel()
 
-        val back = findViewById<TextView>(R.id.back)
-        back.setOnClickListener {
-            if (isFromAddRecipe) {
-                val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-                prefs.edit().putString("lastFragment", "HomeFragment").apply()
-
-                startActivity(Intent(this, MenuActivity::class.java))
-                finish()
-            } else {
-                supportFinishAfterTransition()
-            }
-        }
+        val recipeFadeIn = findViewById<LinearLayout>(R.id.recipeDetails_fadeIn_ll)
+        recipeFadeIn.visibility = View.INVISIBLE
+        val recipeImage = findViewById<ImageView>(R.id.recipeDetails_recipeImage_iv)
+        recipeImage.visibility = View.INVISIBLE
+        showLoadingOverlay()
 
         val recipeId = intent.getStringExtra("recipeId").toString()
-
-        val recipeImage = findViewById<ImageView>(R.id.recipeDetails_recipeImage_iv)
 
         val db = FirebaseFirestore.getInstance()
         val storage = FirebaseStorage.getInstance()
@@ -90,6 +94,9 @@ class RecipeDetailsActivity : AppCompatActivity() {
                                     isFirstResource: Boolean
                                 ): Boolean {
                                     supportStartPostponedEnterTransition()
+                                    recipeFadeIn.visibility = View.VISIBLE
+                                    recipeImage.visibility = View.VISIBLE
+                                    hideLoadingOverlay()
                                     return false
                                 }
 
@@ -100,11 +107,13 @@ class RecipeDetailsActivity : AppCompatActivity() {
                                     dataSource: com.bumptech.glide.load.DataSource,
                                     isFirstResource: Boolean
                                 ): Boolean {
-                                    if (!isFromAddRecipe) {
+                                    if (!isFromAddRecipe && !isFromNotification) {
                                         supportStartPostponedEnterTransition()
                                     }
 
-                                    val recipeFadeIn = findViewById<LinearLayout>(R.id.recipeDetails_fadeIn_ll)
+                                    recipeFadeIn.visibility = View.VISIBLE
+                                    recipeImage.visibility = View.VISIBLE
+                                    hideLoadingOverlay()
 
                                     // 1. Position the text slightly lower than its final spot
                                     recipeFadeIn.translationY = 100f
@@ -127,11 +136,223 @@ class RecipeDetailsActivity : AppCompatActivity() {
                         recipeImage.setImageResource(R.drawable.img_recipe_item_example)
                     }
                 assignRecipeData(it)
+                createAndControlTimer(it)
             }
             .addOnFailureListener {
-                // Handle failure
+                Toast.makeText(this, "Failed to load recipe.", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+
+        val backCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                handleBackPressed(this)
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, backCallback)
+
+        val back = findViewById<TextView>(R.id.back)
+        back.setOnClickListener {
+            handleBackPressed(backCallback)
+        }
+
+        val addToWeekPlanButton = findViewById<Button>(R.id.recipeDetails_addToWeekPlan_btn)
+        val auth = FirebaseAuth.getInstance()
+        if (auth.currentUser == null) {
+            addToWeekPlanButton.visibility = View.GONE
+        } else {
+            addToWeekPlanButton.setOnClickListener {
+                showDayPickerDialog(intent.getStringExtra("recipeId").toString())
+            }
+        }
+    }
+
+    private fun handleBackPressed(backCallback: OnBackPressedCallback) {
+        if (isFromAddRecipe || isFromNotification) {
+            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+            prefs.edit().putString("lastFragment", "HomeFragment").apply()
+
+            startActivity(Intent(this@RecipeDetailsActivity, MenuActivity::class.java))
+            finish()
+        } else {
+            backCallback.isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
+        }
+    }
+
+    private fun showDayPickerDialog(recipeId: String) {
+        val nextSevenDays = getNextSevenDays()
+        val dayLabels = nextSevenDays.map { it.displayLabel }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Choose a day:")
+            .setItems(dayLabels) { _, chosenIndex ->
+                val selectedDay = nextSevenDays[chosenIndex]
+                showMealTypeDialog(recipeId, selectedDay)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showMealTypeDialog(recipeId: String, selectedDay: PlannedDay) {
+        val mealTypeLabels = arrayOf("Breakfast", "Lunch", "Dinner")
+
+        AlertDialog.Builder(this)
+            .setTitle("Choose a meal:")
+            .setItems(mealTypeLabels) { _, chosenIndex ->
+                val mealField = when (chosenIndex) {
+                    0 -> "breakfastId"
+                    1 -> "lunchId"
+                    else -> "dinnerId"
+                }
+                val mealName = mealTypeLabels[chosenIndex]
+
+                addRecipeToWeekPlan(recipeId, selectedDay, mealField, mealName)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun addRecipeToWeekPlan(
+        recipeId: String,
+        selectedDay: PlannedDay,
+        mealField: String,
+        mealName: String
+    ) {
+        val user = FirebaseAuth.getInstance().currentUser ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        val mealPlanDocument = db.collection("users")
+            .document(user.uid)
+            .collection("mealPlans")
+            .document(selectedDay.documentId)
+
+        mealPlanDocument.get()
+            .addOnSuccessListener { document ->
+                val existingRecipeId = document.getString(mealField)
+
+                // If the same recipe is already there then there is nothing to replace
+                if (existingRecipeId == recipeId) {
+                    Toast.makeText(
+                        this,
+                        "This recipe is already planned for ${selectedDay.displayLabel.lowercase()} $mealName.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else if (existingRecipeId.isNullOrBlank()) {
+                    saveMealPlanSlot(
+                        mealPlanDocument,
+                        recipeId,
+                        mealField,
+                        selectedDay
+                    )
+                } else {
+                    AlertDialog.Builder(this)
+                        .setTitle("Replace planned meal?")
+                        .setMessage("$mealName on ${selectedDay.displayLabel} already has a recipe. Do you want to replace it?")
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Replace") { _, _ ->
+                            saveMealPlanSlot(
+                                mealPlanDocument,
+                                recipeId,
+                                mealField,
+                                selectedDay
+                            )
+                        }
+                        .show()
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to check week plan.", Toast.LENGTH_SHORT).show()
             }
     }
+
+    private fun saveMealPlanSlot(
+        mealPlanDocument: com.google.firebase.firestore.DocumentReference,
+        recipeId: String,
+        mealField: String,
+        date: PlannedDay
+    ) {
+        val data = mapOf(mealField to recipeId)
+
+        mealPlanDocument.set(data, SetOptions.merge())
+            .addOnSuccessListener {
+                // Sending RESULT_OK back to the week plan page so it knows it needs to refresh
+                setResult(RESULT_OK)
+
+                val mealType = getMealType(mealField)
+                val mealTypeLabel = mealType.lowercase().replaceFirstChar { it.uppercase() }
+                val user = FirebaseAuth.getInstance().currentUser
+                val notificationTime = getMealNotificationTime(mealField, user!!.uid)
+
+                Toast.makeText(this@RecipeDetailsActivity, "Added to ${date.displayLabel} $mealTypeLabel.", Toast.LENGTH_SHORT).show()
+                // Need to activate the alarm for the new meal
+                MealPlanNotificationManager.scheduleMealNotification(
+                    this@RecipeDetailsActivity,
+                    recipeId,
+                    mealType,
+                    date.documentId,
+                    notificationTime
+                )
+            }
+            .addOnFailureListener {
+                Toast.makeText(this@RecipeDetailsActivity, "Failed to add to week plan.", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun getMealType(mealField: String): String {
+        return when (mealField) {
+            "breakfastId" -> MealType.BREAKFAST.toString()
+            "lunchId" -> MealType.LUNCH.toString()
+            "dinnerId" -> MealType.DINNER.toString()
+            else -> ""
+        }
+    }
+
+    private fun getMealNotificationTime(mealField: String, uid: String): String {
+        return when (mealField) {
+            "breakfastId" -> SettingsManager.getBreakfastNotificationTime(this, uid)
+            "lunchId" -> SettingsManager.getLunchNotificationTime(this, uid)
+            "dinnerId" -> SettingsManager.getDinnerNotificationTime(this, uid)
+            else -> "08:00"
+        }
+    }
+
+    private fun getNextSevenDays(): List<PlannedDay> {
+        val documentFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val displayFormatter = SimpleDateFormat("EEEE, MMM d", Locale.getDefault())
+        val calendar = Calendar.getInstance()
+        val days = mutableListOf<PlannedDay>()
+
+        for (i in 0 until 7) {
+            val currentDate = calendar.time
+            val baseLabel = displayFormatter.format(currentDate)
+            val displayLabel = when (i) {
+                0 -> "Today ($baseLabel)"
+                1 -> "Tomorrow ($baseLabel)"
+                else -> baseLabel
+            }
+
+            days.add(
+                // Saving both the Firestore date and the text shown to the user in one object
+                PlannedDay(
+                    documentId = documentFormatter.format(currentDate),
+                    displayLabel = displayLabel
+                )
+            )
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        return days
+    }
+
+    data class PlannedDay(
+        val documentId: String,
+        val displayLabel: String
+    )
+
+    private lateinit var floatingTimer: LinearLayout
+    private lateinit var timerProgress: ProgressBar
+    private lateinit var timerIcon: ImageView
+    private lateinit var timerText: TextView
     fun assignRecipeData(doc: DocumentSnapshot) {
         val recipeName = findViewById<TextView>(R.id.recipeDetails_recipeName_tv)
         val recipeDescription = findViewById<TextView>(R.id.recipeDetails_recipeDescription_tv)
@@ -141,10 +362,10 @@ class RecipeDetailsActivity : AppCompatActivity() {
         val recipeNotesTitle = findViewById<TextView>(R.id.recipeDetails_recipeNotesTitle_tv)
         val recipeNotes = findViewById<TextView>(R.id.recipeDetails_recipeNotes_tv)
 
-        val floatingTimer = findViewById<LinearLayout>(R.id.recipeDetails_floatingTimer_ll)
-        val timerProgress = findViewById<ProgressBar>(R.id.recipeDetails_floatingTimerProgress_pb)
-        val timerIcon = findViewById<ImageView>(R.id.recipeDetails_floatingTimerIcon_iv)
-        val timerText = findViewById<TextView>(R.id.recipeDetails_floatingTimerText_tv)
+        floatingTimer = findViewById(R.id.recipeDetails_floatingTimer_ll)
+        timerProgress = findViewById(R.id.recipeDetails_floatingTimerProgress_pb)
+        timerIcon = findViewById(R.id.recipeDetails_floatingTimerIcon_iv)
+        timerText = findViewById(R.id.recipeDetails_floatingTimerText_tv)
 
         val recipeChef = findViewById<TextView>(R.id.recipeDetails_recipeChef_tv)
 
@@ -177,6 +398,10 @@ class RecipeDetailsActivity : AppCompatActivity() {
             recipeNotes.text = notes
         }
 
+        recipeChef.text = "Recipe by ${doc.getString("chefUsername")}"
+    }
+
+    fun createAndControlTimer(doc: DocumentSnapshot) {
         // If the AI suggested a timer then setting it
         val timerMinutes = (doc.get("timerMinutes") ?: "0").toString().toInt()
         var isTimerRunning = false // For pause/resume functionality
@@ -255,7 +480,7 @@ class RecipeDetailsActivity : AppCompatActivity() {
                                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                                 )
 
-                                val builder = NotificationCompat.Builder(this@RecipeDetailsActivity, "TIMER_CHANNEL")
+                                val notification = NotificationCompat.Builder(this@RecipeDetailsActivity, "TIMER_CHANNEL")
                                     .setSmallIcon(R.drawable.ic_timer)
                                     .setContentTitle("Timer Finished ⏱")
                                     .setContentText("Your cooking timer has finished!")
@@ -263,9 +488,10 @@ class RecipeDetailsActivity : AppCompatActivity() {
                                     .setAutoCancel(true)
                                     .setContentIntent(pendingIntent)
                                     .setDefaults(NotificationCompat.DEFAULT_ALL)
+                                    .build()
 
                                 val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-                                notificationManager.notify(1, builder.build())
+                                notificationManager.notify(1, notification)
                             }
                         }
                     }
@@ -283,8 +509,6 @@ class RecipeDetailsActivity : AppCompatActivity() {
         } else {
             floatingTimer.visibility = View.GONE
         }
-
-        recipeChef.text = "Recipe by ${doc.getString("chefUsername")}"
     }
     fun changeViewMarginBottom(view: View, newMarginDp: Int)
     {
@@ -350,14 +574,20 @@ class RecipeDetailsActivity : AppCompatActivity() {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Timer Channel"
-            val descriptionText = "Notifications for recipe timer"
-            val importance = android.app.NotificationManager.IMPORTANCE_HIGH
-            val channel = android.app.NotificationChannel("TIMER_CHANNEL", name, importance).apply {
-                description = descriptionText
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel("TIMER_CHANNEL", name, importance).apply {
+                description = "Notifications for recipe timer"
             }
-            val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+            val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
     }
 
+    fun showLoadingOverlay() {
+        findViewById<FrameLayout>(R.id.recipeDetails_loadingOverlay_fl).visibility = View.VISIBLE
+    }
+
+    fun hideLoadingOverlay() {
+        findViewById<FrameLayout>(R.id.recipeDetails_loadingOverlay_fl).visibility = View.GONE
+    }
 }

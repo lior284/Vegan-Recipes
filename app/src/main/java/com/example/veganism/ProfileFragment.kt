@@ -71,7 +71,7 @@ class ProfileFragment : Fragment() {
         val tvSavedRecipes = view.findViewById<TextView>(R.id.profileFragment_savedRecipes_tv)
         val scDarkMode = view.findViewById<SwitchCompat>(R.id.profileFragment_darkMode_sc)
         val tvNotifications = view.findViewById<TextView>(R.id.profileFragment_notifications_tv)
-        val tvHelpAndContact = view.findViewById<TextView>(R.id.profileFragment_helpAndContact_tv)
+        val tvAbout = view.findViewById<TextView>(R.id.profileFragment_about_tv)
         val tvSignOut = view.findViewById<TextView>(R.id.profileFragment_signOut_tv)
 
         val savedBase64 = prefs.getString("profilePicture", null)
@@ -160,8 +160,7 @@ class ProfileFragment : Fragment() {
         etFullName.text = "$firstName $lastName"
 
         val userUID = prefs.getString("userUID", "")
-        val userPrefs = requireContext().getSharedPreferences("settings_$userUID", Context.MODE_PRIVATE)
-        scDarkMode.isChecked = userPrefs.getBoolean("darkMode", false)
+        scDarkMode.isChecked = SettingsManager.isDarkModeEnabled(requireContext(), userUID.orEmpty())
 
         tvUserDetails.setOnClickListener {
             startActivity(Intent(requireContext(), UserDetailsActivity::class.java))
@@ -173,15 +172,17 @@ class ProfileFragment : Fragment() {
 
         scDarkMode.setOnCheckedChangeListener { _, isChecked ->
             scDarkMode.postDelayed({
-                    userPrefs.edit().putBoolean("darkMode", isChecked).apply()
-
-                    AppCompatDelegate.setDefaultNightMode(
-                        if (isChecked)
-                            AppCompatDelegate.MODE_NIGHT_YES
-                        else
-                            AppCompatDelegate.MODE_NIGHT_NO
-                    )
+                    SettingsManager.setDarkModeEnabled(requireContext(), userUID.orEmpty(), isChecked)
+                    SettingsManager.applySettings(requireContext(), userUID.orEmpty())
                 }, 175)
+        }
+
+        tvNotifications.setOnClickListener {
+            startActivity(Intent(requireContext(), NotificationsSettingsActivity::class.java))
+        }
+
+        tvAbout.setOnClickListener {
+            startActivity(Intent(requireContext(), AboutActivity::class.java))
         }
 
         tvSignOut.setOnClickListener {
@@ -201,7 +202,7 @@ class ProfileFragment : Fragment() {
                     startActivity(Intent(requireContext(), StartPageActivity::class.java))
                     requireActivity().finish()
 
-                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+                    SettingsManager.applyDefaultSettings()
 
                     activity?.finish()
                 }

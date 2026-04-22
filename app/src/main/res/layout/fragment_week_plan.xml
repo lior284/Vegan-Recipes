@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_page"
+    android:orientation="vertical"
+    android:padding="15dp"
+    tools:context=".WeekPlanFragment">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/quicksand_bold"
+        android:text="Week Plan"
+        android:textColor="#000000"
+        android:textSize="60sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/quicksand_regular"
+        android:text="You can assign recipes to each meal of the week! You will get a notification at the time of the meal about the recipe you assigned.\nTo assign a recipe go to it's page and click the 'Add to Week Plan' button."
+        android:textColor="#000000"
+        android:textSize="19sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/quicksand_regular"
+        android:text="Tap a meal to open the recipe. Long press to remove it from the week plan."
+        android:textColor="@color/hintText"
+        android:textSize="14sp" />
+
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/mealPlanner_days_rv"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:clipToPadding="false" />
+</LinearLayout>

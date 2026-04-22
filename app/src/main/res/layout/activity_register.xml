@@ -124,7 +124,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Are you a vegan?"
+                android:text="Are you vegan?"
                 android:textSize="18sp"
                 android:textColor="@color/primaryUI"
                 android:fontFamily="@font/quicksand_regular"/>
@@ -133,6 +133,7 @@
                 android:id="@+id/register_isVegan_rg"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center"
                 android:orientation="horizontal">
 
                 <RadioButton

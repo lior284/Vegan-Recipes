@@ -17,6 +17,7 @@
         android:textSize="60sp" />
 
     <EditText
+        android:id="@+id/homeFragment_searchBar_et"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
@@ -34,6 +35,7 @@
         android:orientation="horizontal">
 
         <android.widget.Button
+            android:id="@+id/homeFragment_filterAll_btn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -43,6 +45,7 @@
             android:textSize="12sp" />
 
         <android.widget.Button
+            android:id="@+id/homeFragment_filterBreakfast_btn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="5dp"
@@ -53,6 +56,7 @@
             android:textSize="12sp" />
 
         <android.widget.Button
+            android:id="@+id/homeFragment_filterLunch_btn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="5dp"
@@ -63,6 +67,7 @@
             android:textSize="12sp" />
 
         <android.widget.Button
+            android:id="@+id/homeFragment_filterDinner_btn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="5dp"
@@ -73,6 +78,7 @@
             android:textSize="12sp" />
 
         <android.widget.Button
+            android:id="@+id/homeFragment_filterOther_btn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="5dp"

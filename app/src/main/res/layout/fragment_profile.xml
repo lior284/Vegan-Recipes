@@ -145,12 +145,12 @@
             android:background="@color/primaryUI" />
 
         <TextView
-            android:id="@+id/profileFragment_helpAndContact_tv"
+            android:id="@+id/profileFragment_about_tv"
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:gravity="center_vertical"
             android:fontFamily="@font/quicksand_regular"
-            android:text="Help &amp; Contact"
+            android:text="About"
             android:textColor="@color/primaryUI"
             android:textSize="25sp"
             android:drawableLeft="@drawable/ic_help"

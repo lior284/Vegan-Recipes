@@ -11,7 +11,6 @@ import android.view.View
 import android.widget.*
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -263,18 +262,11 @@ class RegisterActivity : AppCompatActivity() {
         }
     }
     private fun saveDefaultSettingsInPrefs(uid: String) {
-        val userPrefs = getSharedPreferences("settings_$uid", MODE_PRIVATE)
-
-        userPrefs.edit {
-            putBoolean("darkMode", false)
-            // Will add here default notifications settings
-            apply()
-        }
+        SettingsManager.saveDefaultSettings(this, uid)
     }
     private fun setDefaultSettings()
     {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        // Will add default notifications settings
+        SettingsManager.applyDefaultSettings()
     }
     private fun showSpecificErrorMessage(exception: Exception) {
         when (exception) {

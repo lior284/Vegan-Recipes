@@ -19,7 +19,7 @@ class MenuActivity : AppCompatActivity() {
 
     private lateinit var homeBtn: TextView
     private lateinit var addRecipeBtn: TextView
-    private lateinit var aiChatBtn: TextView
+    private lateinit var weekPlanBtn: TextView
     private lateinit var profileBtn: TextView
     private lateinit var registerSignInBtn: TextView
 
@@ -39,7 +39,7 @@ class MenuActivity : AppCompatActivity() {
 
         homeBtn = findViewById<TextView>(R.id.homePage_home_tv)
         addRecipeBtn = findViewById<TextView>(R.id.homePage_addRecipe_tv)
-        aiChatBtn = findViewById<TextView>(R.id.homePage_AIChat_tv)
+        weekPlanBtn = findViewById<TextView>(R.id.homePage_WeekPlan_tv)
         profileBtn = findViewById<TextView>(R.id.homePage_profile_tv)
         registerSignInBtn = findViewById<TextView>(R.id.homePage_registerSignIn_tv)
 
@@ -51,7 +51,7 @@ class MenuActivity : AppCompatActivity() {
 
         val (fragment, button) = when (lastFragment) {
             "AddRecipeFragment" -> AddRecipeFragment() to addRecipeBtn
-            "AiChatFragment" -> AiChatFragment() to aiChatBtn
+            "WeekPlanFragment" -> WeekPlanFragment() to weekPlanBtn
             "ProfileFragment" -> ProfileFragment() to profileBtn
             else -> HomeFragment() to homeBtn
         }
@@ -61,7 +61,7 @@ class MenuActivity : AppCompatActivity() {
 
         if (FirebaseAuth.getInstance().currentUser != null) {
             addRecipeBtn.visibility = View.VISIBLE
-            aiChatBtn.visibility = View.VISIBLE
+            weekPlanBtn.visibility = View.VISIBLE
             profileBtn.visibility = View.VISIBLE
             registerSignInBtn.visibility = View.GONE
 
@@ -73,7 +73,7 @@ class MenuActivity : AppCompatActivity() {
             indicator.requestLayout()
         } else {
             addRecipeBtn.visibility = View.GONE
-            aiChatBtn.visibility = View.GONE
+            weekPlanBtn.visibility = View.GONE
             profileBtn.visibility = View.GONE
             registerSignInBtn.visibility = View.VISIBLE
 
@@ -99,9 +99,9 @@ class MenuActivity : AppCompatActivity() {
                 Toast.makeText(this, "You need to sign in or register", Toast.LENGTH_SHORT).show()
             }
         }
-        aiChatBtn.setOnClickListener {
+        weekPlanBtn.setOnClickListener {
             if (FirebaseAuth.getInstance().currentUser != null) {
-                switchFragment(AiChatFragment(), aiChatBtn)
+                switchFragment(WeekPlanFragment(), weekPlanBtn)
             } else {
                 Toast.makeText(this, "You need to sign in or register", Toast.LENGTH_SHORT).show()
             }
