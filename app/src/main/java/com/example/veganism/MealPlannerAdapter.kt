@@ -105,7 +105,7 @@ class MealPlannerAdapter(
             onMealClick(recipeId, imageView)
         }
         slotView.setOnLongClickListener {
-            // Long press is only for deleting the meal from the week plan
+            // Long press is for deleting the meal from the week plan
             onMealLongClick(dayMeals, mealType)
             true
         }
@@ -119,7 +119,6 @@ class MealPlannerAdapter(
             .addOnSuccessListener { document ->
                 if (!document.exists()) {
                     titleView.text = "Recipe missing"
-                    imageView.visibility = View.GONE
                     return@addOnSuccessListener
                 }
 
@@ -133,24 +132,29 @@ class MealPlannerAdapter(
                     return@addOnSuccessListener
                 }
 
-                imageView.visibility = View.VISIBLE
-                storage.getReference("recipes_images/$recipeImage").downloadUrl
-                    .addOnSuccessListener { uri ->
-                        // Converting dp to pixels because RoundedCorners works with pixels
-                        val radiusDp = 16
-                        val radiusPx = (radiusDp * imageView.resources.displayMetrics.density).toInt()
+                // I want to round the corners of the image using RoundedCorners
+                // So I convert dp to pixels because RoundedCorners works with pixels
+                val radiusDp = 16
+                val radiusPx = (radiusDp * imageView.resources.displayMetrics.density).toInt()
 
+                imageView.visibility = View.VISIBLE
+                storage.getReference("recipes_images/$recipeImage")
+                    .downloadUrl
+                    .addOnSuccessListener { uri ->
                         Glide.with(imageView)
                             .load(uri)
                             .apply(RequestOptions().transform(CenterCrop(), RoundedCorners(radiusPx)))
                             .into(imageView)
                     }
                     .addOnFailureListener {
-                        imageView.setImageResource(R.drawable.img_recipe_item_example)
+                        Glide.with(imageView)
+                            .load(R.drawable.img_recipe_item_example)
+                            .apply(RequestOptions().transform(CenterCrop(), RoundedCorners(radiusPx)))
+                            .into(imageView)
                     }
             }
             .addOnFailureListener {
-                titleView.text = "Failed to load"
+                titleView.text = "Failed to load recipe."
                 imageView.visibility = View.GONE
             }
     }
@@ -176,7 +180,6 @@ class MealPlannerAdapter(
 
         return formattedDate
     }
-
     private fun isSameDay(date: Date, calendar: Calendar): Boolean {
         val dateCalendar = Calendar.getInstance().apply {
             time = date

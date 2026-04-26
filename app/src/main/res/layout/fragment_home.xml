@@ -190,6 +190,17 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_card" />
 
+    <TextView
+        android:id="@+id/homeFragment_message_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:fontFamily="@font/quicksand_regular"
+        android:text="Loading recipes..."
+        android:textColor="@color/primaryUI"
+        android:textSize="20sp"
+        android:paddingTop="30dp" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/homeFragment_recipes_rv"
         android:layout_width="match_parent"

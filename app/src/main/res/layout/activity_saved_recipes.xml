@@ -22,6 +22,17 @@
         android:textColor="#000000"
         android:textSize="20sp" />
 
+    <TextView
+        android:id="@+id/savedRecipes_message_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:fontFamily="@font/quicksand_regular"
+        android:text="Loading recipes..."
+        android:textColor="@color/primaryUI"
+        android:textSize="20sp"
+        android:paddingTop="30dp" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/savedRecipes_recipes_rv"
         android:layout_width="match_parent"

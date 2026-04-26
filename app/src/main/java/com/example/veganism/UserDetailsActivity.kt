@@ -28,11 +28,11 @@ class UserDetailsActivity : AppCompatActivity() {
     private lateinit var rgIsVegan: RadioGroup
     private lateinit var tvIsVegan: TextView
 
-    private lateinit var originalFirstName: String
-    private lateinit var originalLastName: String
-    private lateinit var originalUsername: String
-    private lateinit var originalBirthYear: String
-    private var originalIsVegan: Boolean = false // Cannot use 'lateinit' so applying default value
+    private var originalFirstName: String = ""
+    private var originalLastName: String = ""
+    private var originalUsername: String = ""
+    private var originalBirthYear: String = ""
+    private var originalIsVegan: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -206,11 +206,11 @@ class UserDetailsActivity : AppCompatActivity() {
                 currentIsVegan != originalIsVegan
     }
     private fun saveUserDetailsInPrefs() {
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
         prefs.edit {
-            putString("firstName", etFirstName.text.toString())
-            putString("lastName", etLastName.text.toString())
-            putString("username", etUsername.text.toString())
+            putString(AppPrefsConstants.FIRST_NAME_KEY, etFirstName.text.toString())
+            putString(AppPrefsConstants.LAST_NAME_KEY, etLastName.text.toString())
+            putString(AppPrefsConstants.USERNAME_KEY, etUsername.text.toString())
             apply()
         }
     }

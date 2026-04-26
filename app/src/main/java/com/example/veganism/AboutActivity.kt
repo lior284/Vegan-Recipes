@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.net.toUri
 
 class AboutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,7 +30,7 @@ class AboutActivity : AppCompatActivity() {
 
         phone.setOnClickListener {
             val messageIntent = Intent(Intent.ACTION_SENDTO).apply {
-                data = Uri.parse("smsto:+972584261208")
+                data = "smsto:+972584261208".toUri()
             }
             startActivity(messageIntent)
         }

@@ -57,20 +57,20 @@ class StartPageActivity : AppCompatActivity() {
 
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
 
-        if (prefs.getBoolean("rememberMe", false) && user != null) {
+        if (prefs.getBoolean(AppPrefsConstants.REMEMBER_ME_KEY, false) && user != null) {
             showLoadingOverlay()
             val db = FirebaseFirestore.getInstance()
             db.collection("users").document(user.uid).get()
                 .addOnSuccessListener {
                     val myUser = it.toObject(MyUser::class.java)
                     prefs.edit() {
-                        putString("firstName", myUser!!.firstName)
-                        putString("lastName", myUser.lastName)
-                        putString("username", myUser.username)
-                        putString("email", auth.currentUser?.email)
-                        putString("userUID", auth.currentUser?.uid)
+                        putString(AppPrefsConstants.FIRST_NAME_KEY, myUser!!.firstName)
+                        putString(AppPrefsConstants.LAST_NAME_KEY, myUser.lastName)
+                        putString(AppPrefsConstants.USERNAME_KEY, myUser.username)
+                        putString(AppPrefsConstants.EMAIL_KEY, auth.currentUser?.email)
+                        putString(AppPrefsConstants.USER_UID_KEY, auth.currentUser?.uid)
                         apply()
                     }
 
@@ -78,17 +78,10 @@ class StartPageActivity : AppCompatActivity() {
                     storage.getReference("profile_pictures/" + myUser?.profilePicture).getBytes(1024 * 1024) // Picture is 1MB
                         .addOnSuccessListener { bytes ->
                             val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-
-                            // Save Base64 in SharedPreferences
-                            val prefs = this.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-                            val stream = java.io.ByteArrayOutputStream()
-                            bmp.compress(Bitmap.CompressFormat.JPEG, 90, stream)
-                            val bytes = stream.toByteArray()
-                            val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
-                            prefs.edit().putString("profilePicture", base64).apply()
+                            saveProfilePictureToPrefs(bmp)
                         }
                         .addOnFailureListener {
-                            prefs.edit().putString("profilePicture", "img_take_profile_picture.png").apply()
+                            saveProfilePictureToPrefs(null)
                         }
 
                     loadUserSettingsFromPrefs(user.uid)
@@ -100,12 +93,12 @@ class StartPageActivity : AppCompatActivity() {
                 .addOnFailureListener {
                     hideLoadingOverlay()
                     Toast.makeText(this, "Error Loading User", Toast.LENGTH_LONG).show()
-                    prefs.edit().putBoolean("rememberMe", false).apply()
+                    prefs.edit().putBoolean(AppPrefsConstants.REMEMBER_ME_KEY, false).apply()
                 }
         } else if (user != null) {
             auth.signOut() // Clear currentUser if user is not logged in and rememberMe is false
         } else {
-            prefs.edit().putBoolean("rememberMe", false).apply() // Reset rememberMe if user is not logged in
+            prefs.edit().putBoolean(AppPrefsConstants.REMEMBER_ME_KEY, false).apply() // Reset rememberMe if user is not logged in
         }
 
         val cvImageSwitcher = findViewById<CardView>(R.id.startPage_isView_cv)
@@ -156,6 +149,7 @@ class StartPageActivity : AppCompatActivity() {
             handler.postDelayed(switchRunnable, pauseAfterClick)
         }
     }
+
     override fun onDestroy() {
         super.onDestroy()
         // Stop the handler when the activity is destroyed
@@ -164,6 +158,21 @@ class StartPageActivity : AppCompatActivity() {
 
     private fun loadUserSettingsFromPrefs(uid: String) {
         SettingsManager.applySettings(this, uid)
+    }
+
+    private fun saveProfilePictureToPrefs(bitmap: Bitmap?) {
+        val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, Context.MODE_PRIVATE)
+
+        if (bitmap == null) {
+            prefs.edit().remove(AppPrefsConstants.PROFILE_PICTURE_KEY).apply()
+            return
+        }
+
+        val stream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+        val bytes = stream.toByteArray()
+        val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
+        prefs.edit().putString(AppPrefsConstants.PROFILE_PICTURE_KEY, base64).apply()
     }
 
     fun showLoadingOverlay() {

@@ -59,6 +59,10 @@
         <receiver
             android:name=".MealPlanNotificationReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".TimerFinishedReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

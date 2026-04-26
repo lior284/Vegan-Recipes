@@ -47,16 +47,19 @@ class NotificationsSettingsActivity : AppCompatActivity() {
             insets
         }
 
-        userUid = getSharedPreferences("app_prefs", MODE_PRIVATE).getString("userUID", "") ?: ""
-        if (userUid.isBlank()) {
+        userUid = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
+            .getString(AppPrefsConstants.USER_UID_KEY, "") ?: ""
+        if (userUid.isBlank()) { // Just in case :)
             finish()
             return
         }
 
         val back = findViewById<TextView>(R.id.userDetails_backArrow_iv)
+        back.setOnClickListener {
+            finish()
+        }
 
         val scTimerNotifications = findViewById<SwitchCompat>(R.id.notificationsSettings_timerNotifications_sc)
-
         val scWeekPlanNotifications = findViewById<SwitchCompat>(R.id.notificationsSettings_weekPlanNotifications_sc)
 
         val tvBreakfastNotifications = findViewById<TextView>(R.id.notificationsSettings_breakfastNotifications_tv)
@@ -70,10 +73,6 @@ class NotificationsSettingsActivity : AppCompatActivity() {
         val tvDinnerNotifications = findViewById<TextView>(R.id.notificationsSettings_dinnerNotifications_tv)
         val scDinnerNotifications = findViewById<SwitchCompat>(R.id.notificationsSettings_dinnerNotifications_sc)
         val tvDinnerHour = findViewById<TextView>(R.id.notificationsSettings_dinnerHour_tv)
-
-        back.setOnClickListener {
-            finish()
-        }
 
         scTimerNotifications.isChecked = SettingsManager.isTimerNotificationsEnabled(this, userUid)
         scWeekPlanNotifications.isChecked = SettingsManager.isWeekPlanNotificationsEnabled(this, userUid)
@@ -231,9 +230,6 @@ class NotificationsSettingsActivity : AppCompatActivity() {
         saveSetting(isChecked)
         MealPlanNotificationManager.rescheduleWeekPlanNotifications(this, userUid)
     }
-
-
-
 
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {

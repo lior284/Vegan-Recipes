@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -39,11 +38,13 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private lateinit var filterAll: Button
-    private lateinit var filterBreakfast: Button
-    private lateinit var filterLunch: Button
-    private lateinit var filterDinner: Button
-    private lateinit var filterOther: Button
+    private lateinit var filterAllBtn: Button
+    private lateinit var filterBreakfastBtn: Button
+    private lateinit var filterLunchBtn: Button
+    private lateinit var filterDinnerBtn: Button
+    private lateinit var filterOtherBtn: Button
+
+    private lateinit var sbMinutesFilter: SeekBar
 
     private var currentSearchQuery: String = ""
     private var currentMealType: MealType? = null // Null means ALL
@@ -52,6 +53,9 @@ class HomeFragment : Fragment() {
     private val recipesList: MutableList<Recipe> = mutableListOf()
     private val filteredRecipes: MutableList<Recipe> = mutableListOf()
     private lateinit var adapter: RecipeAdapter
+
+    private lateinit var tvMessage: TextView
+    private var isLoadingRecipes = true
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onCreateView(
@@ -62,13 +66,15 @@ class HomeFragment : Fragment() {
 
         val searchBar = view.findViewById<EditText>(R.id.homeFragment_searchBar_et)
 
-        filterAll = view.findViewById(R.id.homeFragment_filterAll_btn)
-        filterBreakfast = view.findViewById(R.id.homeFragment_filterBreakfast_btn)
-        filterLunch = view.findViewById(R.id.homeFragment_filterLunch_btn)
-        filterDinner = view.findViewById(R.id.homeFragment_filterDinner_btn)
-        filterOther = view.findViewById(R.id.homeFragment_filterOther_btn)
+        filterAllBtn = view.findViewById(R.id.homeFragment_filterAll_btn)
+        filterBreakfastBtn = view.findViewById(R.id.homeFragment_filterBreakfast_btn)
+        filterLunchBtn = view.findViewById(R.id.homeFragment_filterLunch_btn)
+        filterDinnerBtn = view.findViewById(R.id.homeFragment_filterDinner_btn)
+        filterOtherBtn = view.findViewById(R.id.homeFragment_filterOther_btn)
 
-        val minutesFilter = view.findViewById<SeekBar>(R.id.homeFragment_minutesFilter_sb)
+        sbMinutesFilter = view.findViewById<SeekBar>(R.id.homeFragment_minutesFilter_sb)
+
+        tvMessage = view.findViewById(R.id.homeFragment_message_tv)
 
         val recycler = view.findViewById<RecyclerView>(R.id.homeFragment_recipes_rv)
         recycler.layoutManager = LinearLayoutManager(requireContext())
@@ -81,24 +87,16 @@ class HomeFragment : Fragment() {
                 val intent = Intent(requireContext(), RecipeDetailsActivity::class.java)
                 intent.putExtra("recipeId", clickedRecipe.id)
 
-                // Create pairs of the View and its Transition Name
-                val pairImage = androidx.core.util.Pair.create<View, String>(
-                    recipeImageView, "recipe_image_transition"
-                )
-                val pairBackground = androidx.core.util.Pair.create<View, String>(
-                    recipeBackground, "recipe_background_transition"
-                )
+                // Create a pair of the View and its Transition Name
+                val pairImage = androidx.core.util.Pair.create<View, String>(recipeImageView, "recipe_image_transition")
 
-                // Pass the pairs into the animation options
-                val options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
-                    requireActivity(),
-                    pairImage,
-                    pairBackground
-                )
+                // Pass the shared image into the animation options
+                val options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(requireActivity(), pairImage)
 
                 startActivity(intent, options.toBundle())
             }
         )
+        recycler.adapter = adapter
 
         db.collection("recipes").get()
             .addOnSuccessListener { result ->
@@ -106,13 +104,12 @@ class HomeFragment : Fragment() {
                     val recipe = item.toObject(Recipe::class.java)
                     recipesList.add(recipe)
                 }
-
-                // Initially show all recipes
-                filteredRecipes.clear()
-                filteredRecipes.addAll(recipesList)
-                adapter.notifyDataSetChanged()
-
-                recycler.adapter = adapter
+                isLoadingRecipes = false
+                applyFilters() // Apply filters after recipes are loaded in case the user touches the filters before the recipes are done loading
+            }
+            .addOnFailureListener {
+                isLoadingRecipes = false
+                tvMessage.text = "Failed to load recipes, please try again later."
             }
 
         searchBar.addTextChangedListener(object : TextWatcher {
@@ -126,40 +123,39 @@ class HomeFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        filterAll.setOnClickListener {
+        filterAllBtn.setOnClickListener {
             currentMealType = null
             applyFilters()
-            updateFilterBtn(filterAll)
+            updateFilterBtn(filterAllBtn)
         }
 
-        filterBreakfast.setOnClickListener {
+        filterBreakfastBtn.setOnClickListener {
             currentMealType = MealType.BREAKFAST
             applyFilters()
-            updateFilterBtn(filterBreakfast)
+            updateFilterBtn(filterBreakfastBtn)
         }
 
-        filterLunch.setOnClickListener {
+        filterLunchBtn.setOnClickListener {
             currentMealType = MealType.LUNCH
             applyFilters()
-            updateFilterBtn(filterLunch)
+            updateFilterBtn(filterLunchBtn)
         }
 
-        filterDinner.setOnClickListener {
+        filterDinnerBtn.setOnClickListener {
             currentMealType = MealType.DINNER
             applyFilters()
-            updateFilterBtn(filterDinner)
+            updateFilterBtn(filterDinnerBtn)
         }
 
-        filterOther.setOnClickListener {
+        filterOtherBtn.setOnClickListener {
             currentMealType = MealType.OTHER
             applyFilters()
-            updateFilterBtn(filterOther)
+            updateFilterBtn(filterOtherBtn)
         }
 
-        minutesFilter.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        sbMinutesFilter.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val minutes = progress
-                currentMaxRecipeMinutes = minutes
+                currentMaxRecipeMinutes = progress // Progress representing the number of minutes
                 applyFilters()
             }
 
@@ -172,24 +168,32 @@ class HomeFragment : Fragment() {
 
     private fun applyFilters()
     {
+        // I don't want to accidentally show a different message if the recipes are still loading.
+        // But for the case where the user touches the filters before the recipes are done loading, I call this function after the recipes are loaded.
+        if (isLoadingRecipes) return
+
         filteredRecipes.clear()
         filteredRecipes.addAll(
             recipesList.filter { recipe ->
-                val mealTypeMatches = currentMealType == null || currentMealType!!.name == recipe.mealType
-                val timeMatches = recipe.cookingTimeMinutes <= currentMaxRecipeMinutes
+                val mealTypeMatches = currentMealType == null || currentMealType?.name == recipe.mealType
+                val timeMatches = recipe.cookingTimeMinutes <= currentMaxRecipeMinutes || sbMinutesFilter.max == currentMaxRecipeMinutes // If the bar is at 60 meaning showing recipes with no time limit
                 val searchMatches = currentSearchQuery.isBlank() ||
                             recipe.name.contains(currentSearchQuery, ignoreCase = true) ||
-                            recipe.description.contains(currentSearchQuery, ignoreCase = true)
+                            recipe.description.contains(currentSearchQuery, ignoreCase = true) ||
+                            recipe.ingredients.contains(currentSearchQuery, ignoreCase = true)
 
                 mealTypeMatches && timeMatches && searchMatches
             }
         )
+
+        tvMessage.visibility = if (filteredRecipes.isEmpty()) View.VISIBLE else View.GONE
+        tvMessage.text = "Sorry, but no recipes match your filters."
+
         adapter.notifyDataSetChanged()
     }
 
-    private fun updateFilterBtn(clickedBtn: Button)
-    {
-        val lst = listOf(filterAll, filterBreakfast, filterLunch, filterDinner, filterOther)
+    private fun updateFilterBtn(clickedBtn: Button) {
+        val lst = listOf(filterAllBtn, filterBreakfastBtn, filterLunchBtn, filterDinnerBtn, filterOtherBtn)
         for (button in lst)
             button.setBackgroundResource(R.drawable.bg_filter_btn)
         clickedBtn.setBackgroundResource(R.drawable.bg_filter_btn_checked)

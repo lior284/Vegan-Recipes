@@ -1,10 +1,13 @@
 package com.example.veganism
 
+import android.Manifest
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.media.Ringtone
 import android.media.RingtoneManager
@@ -25,8 +28,9 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
@@ -45,10 +49,28 @@ import java.util.Locale
 
 class RecipeDetailsActivity : AppCompatActivity() {
 
-    private lateinit var timerReceiver: BroadcastReceiver
     private var isFromAddRecipe = false
     private var isFromNotification = false
+    private var isRecipeScreenVisible = false
+    private var isTimerRunning = false
+    private var totalTimerMillis = 0L
+    private var timeLeftMillis = 0L
+    private var countDownTimer: CountDownTimer? = null
 
+    private lateinit var floatingTimer: LinearLayout
+    private lateinit var timerProgress: ProgressBar
+    private lateinit var timerIcon: ImageView
+    private lateinit var timerText: TextView
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            Toast.makeText(this, "Notification permission is needed for timer alerts.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // The following functions: activity setup and main loading flow
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -66,83 +88,51 @@ class RecipeDetailsActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
         createNotificationChannel()
 
         val recipeFadeIn = findViewById<LinearLayout>(R.id.recipeDetails_fadeIn_ll)
         recipeFadeIn.visibility = View.INVISIBLE
+
         val recipeImage = findViewById<ImageView>(R.id.recipeDetails_recipeImage_iv)
-        recipeImage.visibility = View.INVISIBLE
-        showLoadingOverlay()
+        recipeImage.visibility = View.VISIBLE
 
-        val recipeId = intent.getStringExtra("recipeId").toString()
+        if (isFromAddRecipe || isFromNotification) {
+            showLoadingOverlay()
+        }
 
-        val db = FirebaseFirestore.getInstance()
-        val storage = FirebaseStorage.getInstance()
+        loadRecipe() // Main function
 
-        db.collection("recipes").document(recipeId).get()
-            .addOnSuccessListener {
-                storage.getReference("recipes_images/${it.getString("recipeImage")}").downloadUrl
-                    .addOnSuccessListener { uri ->
-                        Glide.with(this)
-                            .load(uri)
-                            .dontAnimate()
-                            .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
-                                override fun onLoadFailed(
-                                    e: com.bumptech.glide.load.engine.GlideException?,
-                                    model: Any?,
-                                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
-                                    isFirstResource: Boolean
-                                ): Boolean {
-                                    supportStartPostponedEnterTransition()
-                                    recipeFadeIn.visibility = View.VISIBLE
-                                    recipeImage.visibility = View.VISIBLE
-                                    hideLoadingOverlay()
-                                    return false
-                                }
+        val addToWeekPlanButton = findViewById<Button>(R.id.recipeDetails_addToWeekPlan_btn)
+        val auth = FirebaseAuth.getInstance()
 
-                                override fun onResourceReady(
-                                    resource: android.graphics.drawable.Drawable,
-                                    model: Any,
-                                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
-                                    dataSource: com.bumptech.glide.load.DataSource,
-                                    isFirstResource: Boolean
-                                ): Boolean {
-                                    if (!isFromAddRecipe && !isFromNotification) {
-                                        supportStartPostponedEnterTransition()
-                                    }
-
-                                    recipeFadeIn.visibility = View.VISIBLE
-                                    recipeImage.visibility = View.VISIBLE
-                                    hideLoadingOverlay()
-
-                                    // 1. Position the text slightly lower than its final spot
-                                    recipeFadeIn.translationY = 100f
-                                    recipeFadeIn.alpha = 0f
-
-                                    // 2. Animate it slowly to its original position (translationY = 0)
-                                    recipeFadeIn.animate()
-                                        .translationY(0f) // Move up to its natural spot
-                                        .alpha(1f) // Fade in
-                                        .setDuration(500)
-                                        .setInterpolator(android.view.animation.DecelerateInterpolator())
-                                        .start()
-
-                                    return false
-                                }
-                            })
-                            .into(recipeImage)
-                    }
-                    .addOnFailureListener {
-                        recipeImage.setImageResource(R.drawable.img_recipe_item_example)
-                    }
-                assignRecipeData(it)
-                createAndControlTimer(it)
+        if (auth.currentUser == null) {
+            addToWeekPlanButton.visibility = View.GONE
+        } else {
+            addToWeekPlanButton.setOnClickListener {
+                showDayPickerDialog(intent.getStringExtra("recipeId").toString())
             }
-            .addOnFailureListener {
-                Toast.makeText(this, "Failed to load recipe.", Toast.LENGTH_SHORT).show()
-                finish()
-            }
+        }
 
+        setupBackButtonsHandling()
+    }
+
+    override fun onStart() {
+        isRecipeScreenVisible = true
+        super.onStart()
+    }
+
+    override fun onStop() {
+        isRecipeScreenVisible = false
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        countDownTimer?.cancel()
+        super.onDestroy()
+    }
+
+    private fun setupBackButtonsHandling() {
         val backCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 handleBackPressed(this)
@@ -154,22 +144,104 @@ class RecipeDetailsActivity : AppCompatActivity() {
         back.setOnClickListener {
             handleBackPressed(backCallback)
         }
-
-        val addToWeekPlanButton = findViewById<Button>(R.id.recipeDetails_addToWeekPlan_btn)
-        val auth = FirebaseAuth.getInstance()
-        if (auth.currentUser == null) {
-            addToWeekPlanButton.visibility = View.GONE
-        } else {
-            addToWeekPlanButton.setOnClickListener {
-                showDayPickerDialog(intent.getStringExtra("recipeId").toString())
-            }
-        }
     }
 
+    private fun loadRecipe() {
+        val recipeId = intent.getStringExtra("recipeId").toString()
+        val db = FirebaseFirestore.getInstance()
+        val storage = FirebaseStorage.getInstance()
+
+        db.collection("recipes")
+            .document(recipeId)
+            .get()
+            .addOnSuccessListener { document ->
+                loadRecipeImage(storage, document)
+                assignRecipeData(document)
+                setupTimer(document)
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to load recipe, please try again later", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+    }
+
+    private fun loadRecipeImage(storage: FirebaseStorage, document: DocumentSnapshot) {
+        val recipeFadeIn = findViewById<LinearLayout>(R.id.recipeDetails_fadeIn_ll)
+        val recipeImage = findViewById<ImageView>(R.id.recipeDetails_recipeImage_iv)
+
+        storage.getReference("recipes_images/${document.getString("recipeImage")}").downloadUrl
+            .addOnSuccessListener { uri ->
+                Glide.with(this)
+                    .load(uri)
+                    .dontAnimate()
+                    .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                        override fun onLoadFailed(
+                            e: com.bumptech.glide.load.engine.GlideException?,
+                            model: Any?,
+                            target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            supportStartPostponedEnterTransition()
+                            recipeFadeIn.visibility = View.VISIBLE
+                            recipeImage.visibility = View.VISIBLE
+                            hideLoadingOverlay()
+                            return false
+                        }
+
+                        override fun onResourceReady(
+                            resource: android.graphics.drawable.Drawable,
+                            model: Any,
+                            target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                            dataSource: com.bumptech.glide.load.DataSource,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            if (!isFromAddRecipe && !isFromNotification) {
+                                supportStartPostponedEnterTransition()
+                            }
+
+                            recipeFadeIn.visibility = View.VISIBLE
+                            recipeImage.visibility = View.VISIBLE
+                            hideLoadingOverlay()
+
+                            // Start the text slightly lower, then fade and slide it into place.
+                            recipeFadeIn.translationY = 100f
+                            recipeFadeIn.alpha = 0f
+                            recipeFadeIn.animate()
+                                .translationY(0f)
+                                .alpha(1f)
+                                .setDuration(500)
+                                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                                .start()
+
+                            return false
+                        }
+                    })
+                    .into(recipeImage)
+            }
+            .addOnFailureListener { // If the image doesn't load correctly I finish the animation just with the example image
+                recipeImage.setImageResource(R.drawable.img_recipe_item_example)
+                recipeFadeIn.visibility = View.VISIBLE
+                recipeImage.visibility = View.VISIBLE
+                hideLoadingOverlay()
+
+                recipeFadeIn.translationY = 100f
+                recipeFadeIn.alpha = 0f
+                recipeFadeIn.animate()
+                    .translationY(0f)
+                    .alpha(1f)
+                    .setDuration(500)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            }
+    }
+
+    // Navigation
     private fun handleBackPressed(backCallback: OnBackPressedCallback) {
         if (isFromAddRecipe || isFromNotification) {
-            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-            prefs.edit().putString("lastFragment", "HomeFragment").apply()
+            // In these two entry paths, "back" should return to the menu/home flow
+            // instead of just closing this activity like a normal details screen.
+            val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
+            prefs.edit().putString(AppPrefsConstants.LAST_FRAGMENT_KEY, "HomeFragment").apply()
 
             startActivity(Intent(this@RecipeDetailsActivity, MenuActivity::class.java))
             finish()
@@ -178,6 +250,8 @@ class RecipeDetailsActivity : AppCompatActivity() {
             onBackPressedDispatcher.onBackPressed()
         }
     }
+
+    // The following functions: week plan flow
 
     private fun showDayPickerDialog(recipeId: String) {
         val nextSevenDays = getNextSevenDays()
@@ -238,24 +312,14 @@ class RecipeDetailsActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
                 } else if (existingRecipeId.isNullOrBlank()) {
-                    saveMealPlanSlot(
-                        mealPlanDocument,
-                        recipeId,
-                        mealField,
-                        selectedDay
-                    )
+                    saveMealPlanSlot(mealPlanDocument, recipeId, mealField, selectedDay)
                 } else {
                     AlertDialog.Builder(this)
                         .setTitle("Replace planned meal?")
                         .setMessage("$mealName on ${selectedDay.displayLabel} already has a recipe. Do you want to replace it?")
                         .setNegativeButton("Cancel", null)
                         .setPositiveButton("Replace") { _, _ ->
-                            saveMealPlanSlot(
-                                mealPlanDocument,
-                                recipeId,
-                                mealField,
-                                selectedDay
-                            )
+                            saveMealPlanSlot(mealPlanDocument, recipeId, mealField, selectedDay)
                         }
                         .show()
                 }
@@ -332,7 +396,6 @@ class RecipeDetailsActivity : AppCompatActivity() {
             }
 
             days.add(
-                // Saving both the Firestore date and the text shown to the user in one object
                 PlannedDay(
                     documentId = documentFormatter.format(currentDate),
                     displayLabel = displayLabel
@@ -349,10 +412,7 @@ class RecipeDetailsActivity : AppCompatActivity() {
         val displayLabel: String
     )
 
-    private lateinit var floatingTimer: LinearLayout
-    private lateinit var timerProgress: ProgressBar
-    private lateinit var timerIcon: ImageView
-    private lateinit var timerText: TextView
+    // Content display
     fun assignRecipeData(doc: DocumentSnapshot) {
         val recipeName = findViewById<TextView>(R.id.recipeDetails_recipeName_tv)
         val recipeDescription = findViewById<TextView>(R.id.recipeDetails_recipeDescription_tv)
@@ -361,13 +421,12 @@ class RecipeDetailsActivity : AppCompatActivity() {
         val recipeInstructions = findViewById<TextView>(R.id.recipeDetails_recipeInstructions_tv)
         val recipeNotesTitle = findViewById<TextView>(R.id.recipeDetails_recipeNotesTitle_tv)
         val recipeNotes = findViewById<TextView>(R.id.recipeDetails_recipeNotes_tv)
+        val recipeChef = findViewById<TextView>(R.id.recipeDetails_recipeChef_tv)
 
         floatingTimer = findViewById(R.id.recipeDetails_floatingTimer_ll)
         timerProgress = findViewById(R.id.recipeDetails_floatingTimerProgress_pb)
         timerIcon = findViewById(R.id.recipeDetails_floatingTimerIcon_iv)
         timerText = findViewById(R.id.recipeDetails_floatingTimerText_tv)
-
-        val recipeChef = findViewById<TextView>(R.id.recipeDetails_recipeChef_tv)
 
         recipeName.text = doc.getString("name")
         recipeDescription.text = doc.getString("description")
@@ -383,11 +442,9 @@ class RecipeDetailsActivity : AppCompatActivity() {
                 "Total cooking time: $hours h $minutes min"
             }
 
-        // Creating a bulleted and numbered list of ingredients and instructions
-        recipeIngredients.text = createBulletedList(doc.getString("ingredients") ?: "Empty")
-        recipeInstructions.text = createNumberedList(doc.getString("instructions") ?: "Empty")
+        recipeIngredients.text = createBulletedList(doc.getString("ingredients") ?: "Error loading, please try again later.")
+        recipeInstructions.text = createNumberedList(doc.getString("instructions") ?: "Error loading, please try again later.")
 
-        // If notes exist display it
         val notes = doc.getString("notes").orEmpty()
         if (notes.isBlank()) {
             recipeNotesTitle.visibility = View.GONE
@@ -401,117 +458,261 @@ class RecipeDetailsActivity : AppCompatActivity() {
         recipeChef.text = "Recipe by ${doc.getString("chefUsername")}"
     }
 
-    fun createAndControlTimer(doc: DocumentSnapshot) {
-        // If the AI suggested a timer then setting it
-        val timerMinutes = (doc.get("timerMinutes") ?: "0").toString().toInt()
-        var isTimerRunning = false // For pause/resume functionality
-        var countDownTimer: CountDownTimer? = null
+    // The following functions: timer flow
+    private fun setupTimer(doc: DocumentSnapshot) {
+        val timerMinutes = (doc.get("timerMinutes") ?: "0").toString().toIntOrNull() ?: 0
+        val recipeId = doc.id
 
-        if (timerMinutes > 0) {
-            floatingTimer.visibility = View.VISIBLE
-            timerProgress.visibility = View.GONE
-            timerIcon.visibility = View.VISIBLE
-            changeViewMarginBottom(timerText, 5)
-            timerText.text = timerMinutes.toString()
-            timerProgress.max = timerMinutes * 60 // Progress in seconds
-
-            val totalTimerMillis = timerMinutes * 60 * 1000L
-            var timeLeftMillis = totalTimerMillis
-
-            floatingTimer.setOnClickListener {
-                if (isTimerRunning) {
-                    countDownTimer?.cancel()
-
-                    timerProgress.visibility = View.VISIBLE
-                    timerProgress.progressDrawable = ContextCompat.getDrawable(this, R.drawable.bg_progress_bar_paused)
-                    timerProgress.progress = ((totalTimerMillis - timeLeftMillis) / 1000).toInt()
-
-                    timerText.setTextColor(resources.getColor(R.color.timerProgressBar))
-                    isTimerRunning = false
-                } else {
-                    countDownTimer = object : CountDownTimer(timeLeftMillis, 1000) {
-                        override fun onTick(millisUntilFinished: Long) {
-                            timeLeftMillis = millisUntilFinished
-
-                            val min = (millisUntilFinished / 1000) / 60
-                            val sec = (millisUntilFinished / 1000) % 60
-                            timerText.text = "%d:%02d".format(min, sec)
-                            timerProgress.progress = ((totalTimerMillis - timeLeftMillis) / 1000).toInt()
-                            timerProgress.visibility = View.VISIBLE
-                        }
-
-                        override fun onFinish() {
-                            timerText.text = "DONE!"
-                            timerProgress.visibility = View.GONE
-                            timeLeftMillis = totalTimerMillis
-                            isTimerRunning = false
-
-                            if (isAppInForeground()) { // If the user is in the app then making an alert, a repeated vibration and a sound
-                                val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-
-                                if (vibrator.hasVibrator()) {
-                                    val effect = VibrationEffect.createWaveform(longArrayOf(0, 500, 500), -1)
-                                    vibrator.vibrate(effect)
-                                }
-
-                                val notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                                val ringtone: Ringtone? = RingtoneManager.getRingtone(this@RecipeDetailsActivity, notificationSound)
-                                ringtone?.play()
-
-                                AlertDialog.Builder(this@RecipeDetailsActivity)
-                                    .setTitle("Timer Finished ⏱")
-                                    .setMessage("Your %d minutes timer has finished!".format(timerMinutes))
-                                    .setCancelable(false)
-                                    .setPositiveButton("OK") { dialog, _ ->
-                                        vibrator.cancel()
-                                        dialog.dismiss()
-                                    }
-                                    .show()
-                            } else {
-                                // If the app is in the background then sending notification
-                                val intent = Intent(this@RecipeDetailsActivity, RecipeDetailsActivity::class.java)
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                intent.putExtra("recipeId", doc.id)
-
-                                val pendingIntent = PendingIntent.getActivity(
-                                    this@RecipeDetailsActivity,
-                                    0,
-                                    intent,
-                                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                                )
-
-                                val notification = NotificationCompat.Builder(this@RecipeDetailsActivity, "TIMER_CHANNEL")
-                                    .setSmallIcon(R.drawable.ic_timer)
-                                    .setContentTitle("Timer Finished ⏱")
-                                    .setContentText("Your cooking timer has finished!")
-                                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                                    .setAutoCancel(true)
-                                    .setContentIntent(pendingIntent)
-                                    .setDefaults(NotificationCompat.DEFAULT_ALL)
-                                    .build()
-
-                                val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-                                notificationManager.notify(1, notification)
-                            }
-                        }
-                    }
-
-                    countDownTimer.start()
-                    timerProgress.progressDrawable = ContextCompat.getDrawable(this, R.drawable.bg_progress_bar)
-                    timerText.setTextColor(Color.argb(255,0,0,0))
-                    isTimerRunning = true
-                    timerProgress.visibility = View.VISIBLE
-                    timerIcon.visibility = View.GONE
-                    changeViewMarginBottom(timerText, 0)
-                }
-            }
-
-        } else {
+        if (timerMinutes == 0) {
             floatingTimer.visibility = View.GONE
+            return
+        }
+
+        floatingTimer.visibility = View.VISIBLE
+        totalTimerMillis = timerMinutes * 60 * 1000L
+        timerProgress.max = timerMinutes * 60 // The progress is in seconds
+
+        // If this recipe already had a running timer saved in prefs, then restoring the remaining time.
+        // Otherwise showing the normal initial state of a timer.
+        val savedTimerEndTime = getSavedTimerEndTime(recipeId)
+        if (savedTimerEndTime != null && savedTimerEndTime > System.currentTimeMillis()) {
+            timeLeftMillis = savedTimerEndTime - System.currentTimeMillis()
+            startTimerCountdown(recipeId, timerMinutes, false)
+        } else {
+            initialOrResetTimer(recipeId, timerMinutes)
+            if(savedTimerEndTime != null) // If entering the activity after the timer has finished then I want to show 'Done!'
+            {
+                timerText.text = "DONE!"
+                timerProgress.visibility = View.GONE
+                changeViewMarginBottom(timerText, 0)
+            }
+        }
+
+        floatingTimer.setOnClickListener {
+            if (isTimerRunning) {
+                pauseTimer(recipeId)
+            } else {
+                startTimerCountdown(recipeId, timerMinutes, true)
+            }
+        }
+
+        floatingTimer.setOnLongClickListener {
+            if (isTimerRunning) {
+                initialOrResetTimer(recipeId, timerMinutes)
+                true
+            } else {
+                false
+            }
         }
     }
-    fun changeViewMarginBottom(view: View, newMarginDp: Int)
-    {
+
+    private fun showInitialTimerState(timerMinutes: Int) {
+        isTimerRunning = false
+        timeLeftMillis = totalTimerMillis
+        timerProgress.visibility = View.GONE
+        timerIcon.visibility = View.VISIBLE
+        changeViewMarginBottom(timerText, 5)
+        timerText.text = timerMinutes.toString()
+        timerText.setTextColor(Color.argb(255, 0, 0, 0))
+    }
+
+    private fun initialOrResetTimer(recipeId: String, timerMinutes: Int) {
+        countDownTimer?.cancel()
+        clearSavedTimerState(recipeId) // Clearing prefs
+        cancelTimerAlarm(recipeId) // Canceling scheduled alarm
+        showInitialTimerState(timerMinutes) // Resetting UI
+    }
+
+    private fun pauseTimer(recipeId: String) {
+        countDownTimer?.cancel()
+        cancelTimerAlarm(recipeId)
+        clearSavedTimerState(recipeId)
+
+        timerProgress.visibility = View.VISIBLE
+        timerProgress.progressDrawable = ContextCompat.getDrawable(this, R.drawable.bg_progress_bar_paused)
+        timerProgress.progress = ((totalTimerMillis - timeLeftMillis) / 1000).toInt()
+        timerText.setTextColor(resources.getColor(R.color.timerProgressBar))
+        isTimerRunning = false
+    }
+
+    private fun startTimerCountdown(recipeId: String, timerMinutes: Int, needToScheduleAlarm: Boolean) {
+        countDownTimer?.cancel() // Just in case there's an old timer running
+
+        if (needToScheduleAlarm) {
+            // Saving the exact finish time so the timer can be restored if the user leaves the screen, and scheduling an alarm in case
+            // the timer finishes and the user has left the screen.
+            val timerEndTime = System.currentTimeMillis() + timeLeftMillis
+            saveRunningTimerState(recipeId, timerEndTime)
+            if (areTimerNotificationsEnabled()) {
+                requestNotificationPermissionIfNeeded()
+                scheduleTimerAlarm(recipeId, timerMinutes, timerEndTime)
+            }
+        }
+
+        countDownTimer = object : CountDownTimer(timeLeftMillis, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                timeLeftMillis = millisUntilFinished
+
+                val min = millisUntilFinished / 1000 / 60
+                val sec = millisUntilFinished / 1000 % 60
+                timerText.text = "%d:%02d".format(min, sec)
+                timerProgress.progress = ((totalTimerMillis - timeLeftMillis) / 1000).toInt()
+                timerProgress.visibility = View.VISIBLE
+            }
+
+            override fun onFinish() {
+                clearSavedTimerState(recipeId)
+                cancelTimerAlarm(recipeId)
+
+                timerText.text = "DONE!"
+                timerProgress.visibility = View.GONE
+                changeViewMarginBottom(timerText, 0)
+                timeLeftMillis = totalTimerMillis
+                isTimerRunning = false
+
+                if (isRecipeScreenVisible) {
+                    val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+                    if (vibrator.hasVibrator()) {
+                        val effect = VibrationEffect.createWaveform(longArrayOf(0, 500, 500), -1)
+                        vibrator.vibrate(effect)
+                    }
+
+                    val notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    val ringtone: Ringtone? = RingtoneManager.getRingtone(this@RecipeDetailsActivity, notificationSound)
+                    ringtone?.play()
+
+                    AlertDialog.Builder(this@RecipeDetailsActivity)
+                        .setTitle("Timer Finished!")
+                        .setMessage("Your $timerMinutes minutes timer has finished!")
+                        .setCancelable(false)
+                        .setPositiveButton("OK") { dialog, _ ->
+                            vibrator.cancel()
+                            dialog.dismiss()
+                        }
+                        .show()
+                } else {
+                    // If this screen is no longer visible, the mark for the timer finish should
+                    // create a notification instead of a dialog.
+                    if (areTimerNotificationsEnabled()) {
+                        showTimerFinishedNotification(recipeId)
+                    }
+                }
+            }
+        }
+
+        countDownTimer?.start()
+        timerProgress.progressDrawable = ContextCompat.getDrawable(this, R.drawable.bg_progress_bar)
+        timerText.setTextColor(Color.argb(255, 0, 0, 0))
+        isTimerRunning = true
+        timerProgress.visibility = View.VISIBLE
+        timerIcon.visibility = View.GONE
+        changeViewMarginBottom(timerText, 0)
+    }
+
+    private fun saveRunningTimerState(recipeId: String, timerEndTime: Long) {
+        val prefs = getSharedPreferences(TIMER_PREFS_NAME, Context.MODE_PRIVATE)
+        val oldRecipeId = prefs.getString(TIMER_RECIPE_ID_KEY, null)
+
+        // Only one recipe timer is allowed at a time, so cancel the old recipe's alarm
+        // before saving the new one.
+        if (oldRecipeId != null && oldRecipeId != recipeId) {
+            cancelTimerAlarm(oldRecipeId)
+        }
+
+        prefs.edit()
+            .putString(TIMER_RECIPE_ID_KEY, recipeId)
+            .putLong(TIMER_END_TIME_KEY, timerEndTime)
+            .apply()
+    }
+
+    private fun clearSavedTimerState(recipeId: String) {
+        val prefs = getSharedPreferences(TIMER_PREFS_NAME, Context.MODE_PRIVATE)
+        val savedRecipeId = prefs.getString(TIMER_RECIPE_ID_KEY, null)
+
+        if (savedRecipeId == recipeId) {
+            prefs.edit()
+                .remove(TIMER_RECIPE_ID_KEY)
+                .remove(TIMER_END_TIME_KEY)
+                .apply()
+        }
+    }
+
+    private fun getSavedTimerEndTime(recipeId: String): Long? {
+        val prefs = getSharedPreferences(TIMER_PREFS_NAME, MODE_PRIVATE)
+        val savedRecipeId = prefs.getString(TIMER_RECIPE_ID_KEY, null)
+        // If the current recipe is not the recipe that has a saved timer then return null
+        if (savedRecipeId != recipeId) {
+            return null
+        }
+
+        val savedTime = prefs.getLong(TIMER_END_TIME_KEY, 0L)
+        return if (savedTime > 0L) savedTime else null
+    }
+
+    private fun scheduleTimerAlarm(recipeId: String, timerMinutes: Int, timerEndTime: Long) {
+        val intent = Intent(this, TimerFinishedReceiver::class.java).apply {
+            putExtra("recipeId", recipeId)
+            putExtra("timerMinutes", timerMinutes)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            recipeId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            timerEndTime,
+            pendingIntent
+        )
+    }
+
+    private fun cancelTimerAlarm(recipeId: String) {
+        val intent = Intent(this, TimerFinishedReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            recipeId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(pendingIntent)
+    }
+
+    private fun showTimerFinishedNotification(recipeId: String) {
+        val intent = Intent(this, RecipeDetailsActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("recipeId", recipeId)
+            putExtra("fromNotification", true)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            recipeId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, "TIMER_CHANNEL")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Timer Finished!")
+            .setContentText("Your cooking timer has finished!")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .build()
+
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(recipeId.hashCode(), notification)
+    }
+
+    // The following functions: formatting and shared helpers
+    fun changeViewMarginBottom(view: View, newMarginDp: Int) {
         val scale = resources.displayMetrics.density
         val marginInPx = (newMarginDp * scale).toInt()
 
@@ -519,16 +720,16 @@ class RecipeDetailsActivity : AppCompatActivity() {
         params.topMargin = marginInPx
         view.layoutParams = params
     }
+
     fun createBulletedList(text: String, bulletMargin: Int = 30): SpannableStringBuilder {
         val lines = text.lines().filter { it.isNotBlank() }
         val result = SpannableStringBuilder()
 
         for (line in lines) {
-            val bullet = "• "
+            val bullet = "ג€¢ "
             val fullLine = bullet + line.trim() + "\n"
             val spannable = SpannableString(fullLine)
 
-            // Hanging indent: first line = 0, wrapped lines = bulletMargin
             spannable.setSpan(
                 LeadingMarginSpan.Standard(0, bulletMargin),
                 0,
@@ -541,6 +742,7 @@ class RecipeDetailsActivity : AppCompatActivity() {
 
         return result
     }
+
     fun createNumberedList(text: String, numberMargin: Int = 50): SpannableStringBuilder {
         val lines = text.lines().filter { it.isNotBlank() }
         val result = SpannableStringBuilder()
@@ -550,7 +752,6 @@ class RecipeDetailsActivity : AppCompatActivity() {
             val fullLine = number + line.trim() + "\n"
             val spannable = SpannableString(fullLine)
 
-            // Hanging indent: first line = 0, wrapped lines = numberMargin
             spannable.setSpan(
                 LeadingMarginSpan.Standard(0, numberMargin),
                 0,
@@ -562,13 +763,6 @@ class RecipeDetailsActivity : AppCompatActivity() {
         }
 
         return result
-    }
-
-    private fun isAppInForeground(): Boolean {
-        val activityManager = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
-        val appProcesses = activityManager.runningAppProcesses ?: return false
-        val packageName = packageName
-        return appProcesses.any { it.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND && it.processName == packageName }
     }
 
     private fun createNotificationChannel() {
@@ -583,11 +777,39 @@ class RecipeDetailsActivity : AppCompatActivity() {
         }
     }
 
+    private fun areTimerNotificationsEnabled(): Boolean {
+        val userUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+
+        return if (userUid.isBlank()) {
+            false
+        } else {
+            SettingsManager.isTimerNotificationsEnabled(this, userUid)
+        }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
     fun showLoadingOverlay() {
         findViewById<FrameLayout>(R.id.recipeDetails_loadingOverlay_fl).visibility = View.VISIBLE
     }
 
     fun hideLoadingOverlay() {
         findViewById<FrameLayout>(R.id.recipeDetails_loadingOverlay_fl).visibility = View.GONE
+    }
+
+    companion object {
+        const val TIMER_PREFS_NAME = "timer_prefs"
+        const val TIMER_RECIPE_ID_KEY = "timerRecipeId"
+        const val TIMER_END_TIME_KEY = "timerEndTime"
     }
 }

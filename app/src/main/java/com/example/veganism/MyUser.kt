@@ -7,6 +7,7 @@ data class MyUser (
     var username: String = "",
     var birthYear: Int = 0,
 
+    // I have this get and set because firebase saves 'isSomething' as 'something' and I want to save it as 'isSomething'
     @get:PropertyName("isVegan")
     @set:PropertyName("isVegan")
     var isVegan: Boolean = false,

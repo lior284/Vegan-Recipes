@@ -53,8 +53,9 @@ class AddRecipeFragment : Fragment() {
     private lateinit var etRecipeName: EditText
     private lateinit var etRecipeDescription: EditText
     private lateinit var takePictureLauncher: ActivityResultLauncher<Intent>
-    private lateinit var imageUri: Uri
+    private var imageUri: Uri = Uri.EMPTY
     private lateinit var ivRecipeImage: ImageView
+    private lateinit var llRecipeImage: LinearLayout
 
     private var invalidFields: String = ""
 
@@ -69,17 +70,11 @@ class AddRecipeFragment : Fragment() {
         etRecipeName = view.findViewById<EditText>(R.id.addRecipeFragment_recipeName_et)
         etRecipeDescription = view.findViewById<EditText>(R.id.addRecipeFragment_recipeDescription_et)
         ivRecipeImage = view.findViewById<ImageView>(R.id.addRecipeFragment_recipeImage_iv)
+        llRecipeImage = view.findViewById<LinearLayout>(R.id.addRecipeFragment_recipeImage_ll)
         val btnNext = view.findViewById<Button>(R.id.addRecipeFragment_next_btn)
         val btnReset = view.findViewById<Button>(R.id.addRecipeFragment_reset_btn)
 
-        btnReset.setOnClickListener {
-            etRecipeName.text.clear()
-            etRecipeDescription.text.clear()
-            ivRecipeImage.setImageResource(R.drawable.img_recipe_item_example)
-        }
-
         ivRecipeImage.setOnClickListener {
-
             if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 101)
             } else {
@@ -103,16 +98,25 @@ class AddRecipeFragment : Fragment() {
             etRecipeDescription.text.clear()
             ivRecipeImage.setImageResource(R.drawable.img_recipe_item_example)
             imageUri = Uri.EMPTY
+            invalidFields = ""
+            setErrorOutline(etRecipeName, true)
+            setErrorOutline(etRecipeDescription, true)
+            setErrorOutline(llRecipeImage, true)
         }
 
 
         btnNext.setOnClickListener {
-
-            val intent = Intent(requireContext(), AddRecipeNextActivity::class.java)
-            intent.putExtra("recipeName", etRecipeName.text.toString())
-            intent.putExtra("recipeDescription", etRecipeDescription.text.toString())
-            intent.putExtra("recipeImage", imageUri.toString())
-            startActivity(intent)
+            if(checkAllInputsValid())
+            {
+                val intent = Intent(requireContext(), AddRecipeNextActivity::class.java)
+                intent.putExtra("recipeName", etRecipeName.text.trim().toString())
+                intent.putExtra("recipeDescription", etRecipeDescription.text.trim().toString())
+                intent.putExtra("recipeImage", imageUri.toString())
+                startActivity(intent)
+            } else {
+                Toast.makeText(requireContext(), "Invalid fields: $invalidFields", Toast.LENGTH_SHORT).show()
+                invalidFields = "" // Reset the invalid fields if the user tries submitting again with invalid fields
+            }
         }
 
         return view
@@ -136,7 +140,7 @@ class AddRecipeFragment : Fragment() {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 openCamera()
             } else {
-                Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Please enable camera permission", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -148,7 +152,8 @@ class AddRecipeFragment : Fragment() {
     private fun checkAllInputsValid(): Boolean {
         var allValid = true
 
-        var curValid = !etRecipeName.text.isNullOrEmpty() && etRecipeName.text.length >= 3
+        val recipeNameText = etRecipeName.text.trim()
+        var curValid = recipeNameText.isNotEmpty() && recipeNameText.length >= 3
         if (!curValid)
         {
             allValid = false
@@ -156,7 +161,8 @@ class AddRecipeFragment : Fragment() {
         }
         setErrorOutline(etRecipeName, curValid)
 
-        curValid = !etRecipeDescription.text.isNullOrEmpty() && etRecipeDescription.text.length >= 3
+        val recipeDescriptionText = etRecipeDescription.text.trim()
+        curValid = recipeDescriptionText.isNotEmpty() && recipeDescriptionText.length >= 3
         if (!curValid)
         {
             allValid = false
@@ -170,7 +176,7 @@ class AddRecipeFragment : Fragment() {
             allValid = false
             invalidFields += " Recipe Image,"
         }
-        setErrorOutline(ivRecipeImage, curValid)
+        setErrorOutline(llRecipeImage, curValid)
 
 
         if(invalidFields != "")
@@ -180,6 +186,7 @@ class AddRecipeFragment : Fragment() {
 
         return allValid
     }
+
     private fun setErrorOutline(view: View, isValid: Boolean) {
         val drawable = view.background as GradientDrawable
         if (!isValid) {

@@ -40,14 +40,21 @@ class RecipeAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val recipe = list[position]
+        // Saving the id we expect this holder to represent while the async image request is running
+        val boundRecipeId = recipe.id
 
         holder.name.text = recipe.name
         holder.desc.text = recipe.description
         holder.chef.text = "Chef: ${recipe.chefUsername}"
+        // Resetting the image first so recycled rows won't keep an old image while the new one is loading
+        holder.image.setImageResource(R.drawable.img_recipe_item_example)
 
         storage.getReference("recipes_images/${recipe.recipeImage}").downloadUrl
             .addOnSuccessListener { uri ->
-                if (!holder.itemView.isAttachedToWindow) return@addOnSuccessListener
+                val currentPosition = holder.adapterPosition
+                if (currentPosition == RecyclerView.NO_POSITION) return@addOnSuccessListener
+                // If the holder has already started being used for another recipe, ignore the old callback result.
+                if (list[currentPosition].id != boundRecipeId) return@addOnSuccessListener
 
                 val radiusDp = 16
                 val radiusPx = (radiusDp * holder.image.resources.displayMetrics.density).toInt()
@@ -58,7 +65,10 @@ class RecipeAdapter(
                     .into(holder.image)
             }
             .addOnFailureListener {
-                if (!holder.itemView.isAttachedToWindow) return@addOnFailureListener
+                val currentPosition = holder.adapterPosition
+                if (currentPosition == RecyclerView.NO_POSITION) return@addOnFailureListener
+                if (list[currentPosition].id != boundRecipeId) return@addOnFailureListener
+                // Keeping the example image if the real image failed to load
                 holder.image.setImageResource(R.drawable.img_recipe_item_example)
             }
 
@@ -68,7 +78,7 @@ class RecipeAdapter(
 
         holder.savesCount.text = recipe.savesCount.toString()
 
-        // If the user isn't signed in then finishing the function
+        // If the user isn't signed in then no recipe is saved
         val user = auth.currentUser
         if (user == null) {
             updateBookmarkIcon(holder, false)

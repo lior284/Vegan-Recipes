@@ -45,9 +45,9 @@ class MenuActivity : AppCompatActivity() {
 
         indicator = findViewById(R.id.homePage_indicator_v)
 
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
 
-        val lastFragment = prefs.getString("lastFragment", null)
+        val lastFragment = prefs.getString(AppPrefsConstants.LAST_FRAGMENT_KEY, null)
 
         val (fragment, button) = when (lastFragment) {
             "AddRecipeFragment" -> AddRecipeFragment() to addRecipeBtn
@@ -129,8 +129,8 @@ class MenuActivity : AppCompatActivity() {
         firstLoad = false
 
 
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        prefs.edit().putString("lastFragment", fragment::class.simpleName).apply()
+        val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
+        prefs.edit().putString(AppPrefsConstants.LAST_FRAGMENT_KEY, fragment::class.simpleName).apply()
     }
 
     private fun moveIndicator(target: TextView) {

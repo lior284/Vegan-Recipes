@@ -28,7 +28,7 @@ class MealPlanNotificationReceiver : BroadcastReceiver() {
         val mealTypeLabel = mealType.lowercase().replaceFirstChar { it.uppercase() }
 
         val notification = NotificationCompat.Builder(context, "WEEK_PLAN_CHANNEL")
-            .setSmallIcon(R.drawable.ic_timer)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("$mealTypeLabel reminder")
             .setContentText("You have a planned ${mealType.lowercase()} right now!")
             .setPriority(NotificationCompat.PRIORITY_HIGH)

@@ -1,6 +1,9 @@
 package com.example.veganism
 
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
@@ -13,18 +16,23 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
 
 class AddRecipeNextActivity : AppCompatActivity() {
 
+    private lateinit var etRecipeInfo: EditText
+    private lateinit var etCookingTime: EditText
+    private var invalidFields: String = ""
     val model = GenerativeModel(
         modelName = "gemini-2.0-flash", apiKey = BuildConfig.GEMINI_API_KEY
     )
@@ -48,24 +56,37 @@ class AddRecipeNextActivity : AppCompatActivity() {
         val recipeDescription = intent.getStringExtra("recipeDescription")
         val recipeImage = intent.getStringExtra("recipeImage")
 
-        val etRecipeInfo = findViewById<EditText>(R.id.addRecipeNext_recipeInfo_et)
-        val etCookingTime = findViewById<EditText>(R.id.addRecipeNext_cookingTime_et)
+        etRecipeInfo = findViewById<EditText>(R.id.addRecipeNext_recipeInfo_et)
+        etCookingTime = findViewById<EditText>(R.id.addRecipeNext_cookingTime_et)
 
         val submitBtn = findViewById<Button>(R.id.addRecipeNext_submit_btn)
         submitBtn.setOnClickListener {
             showLoadingOverlay()
+
+            if(!checkAllInputsValid()) {
+                Toast.makeText(this, "Invalid fields: $invalidFields", Toast.LENGTH_SHORT).show()
+                invalidFields = "" // Reset the invalid fields string
+                hideLoadingOverlay()
+                return@setOnClickListener
+            }
+
             val auth = FirebaseAuth.getInstance()
             val user = auth.currentUser
             val store = FirebaseFirestore.getInstance()
 
-            store.collection("users").document(user!!.uid).get().addOnSuccessListener {
+            store.collection("users")
+                .document(user!!.uid)
+                .get()
+                .addOnSuccessListener {
                     val chefUsername = it.getString("username").toString()
 
                     lifecycleScope.launch {
-
-                        val geminiRecipe: RecipeParts = generateGeminiResponse(
-                            etRecipeInfo.text.toString(), etCookingTime.text.toString()
-                        )
+                        val geminiRecipe: RecipeParts = generateGeminiResponse(etRecipeInfo.text.toString(), etCookingTime.text.toString())
+                        if (!isGeminiRecipeValid(geminiRecipe)) {
+                            hideLoadingOverlay()
+                            Toast.makeText(this@AddRecipeNextActivity, "Failed to generate recipe details, please try again.", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
 
                         val recipe = Recipe(
                             "",
@@ -83,62 +104,53 @@ class AddRecipeNextActivity : AppCompatActivity() {
 
                         val imageUri = recipeImage!!.toUri()
 
-                        store.collection("recipes").add(recipe).addOnSuccessListener { document ->
-                                val recipeId = document.id
-                                document.update("id", recipeId)
-                                val storage = FirebaseStorage.getInstance()
-                                storage.getReference("recipes_images/$recipeId.jpg")
-                                    .putFile(imageUri).addOnSuccessListener {
-                                        document.update("recipeImage", "$recipeId.jpg")
-                                            .addOnSuccessListener {
-                                                hideLoadingOverlay()
-                                                Toast.makeText(
-                                                    this@AddRecipeNextActivity,
-                                                    "Recipe added successfully",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-
-                                                val intent = Intent(
-                                                    this@AddRecipeNextActivity,
-                                                    RecipeDetailsActivity::class.java
-                                                )
-                                                intent.putExtra("recipeId", recipeId)
-                                                intent.putExtra("fromAddRecipe", true)
-                                                startActivity(intent)
-                                                overridePendingTransition(
-                                                    android.R.anim.fade_in, android.R.anim.fade_out
-                                                )
-
-                                                finish()
-                                            }.addOnFailureListener {
-                                                hideLoadingOverlay()
-                                                Toast.makeText(
-                                                    this@AddRecipeNextActivity,
-                                                    "Error adding recipe's image",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
-                                    }
-                            }.addOnFailureListener {
-                                hideLoadingOverlay()
-                                Toast.makeText(
-                                    this@AddRecipeNextActivity,
-                                    "Error adding recipe",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-
+                        addRecipeToDatabase(recipe, imageUri)
                     }
                 }.addOnFailureListener {
                     hideLoadingOverlay()
-                    Toast.makeText(this, "Error adding recipe", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Error adding recipe, please try again.", Toast.LENGTH_LONG).show()
                 }
         }
     }
 
-    private suspend fun generateGeminiResponse(
-        userRecipeInput: String, userTimeInput: String
-    ): RecipeParts {
+    private fun checkAllInputsValid(): Boolean {
+        var allValid = true
+
+        val recipeInfoText = etRecipeInfo.text.trim()
+        var curValid = recipeInfoText.isNotEmpty() && recipeInfoText.length >= 3
+        if (!curValid)
+        {
+            allValid = false
+            invalidFields += " Recipe Info,"
+        }
+        setErrorOutline(etRecipeInfo, curValid)
+
+        val recipeCookingTimeText = etCookingTime.text.trim()
+        curValid = recipeCookingTimeText.isNotEmpty() && recipeCookingTimeText.length >= 3
+        if (!curValid)
+        {
+            allValid = false
+            invalidFields += " Recipe Cooking Time,"
+        }
+        setErrorOutline(etCookingTime, curValid)
+
+        if(invalidFields != "")
+        {
+            invalidFields = invalidFields.substring(0, invalidFields.length-1)
+        }
+
+        return allValid
+    }
+    private fun setErrorOutline(view: View, isValid: Boolean) {
+        val drawable = view.background as GradientDrawable
+        if (!isValid) {
+            drawable.setStroke(3, Color.RED)
+        } else {
+            drawable.setStroke(1, "#DDDDDD".toColorInt())
+        }
+    }
+
+    private suspend fun generateGeminiResponse(userRecipeInput: String, userTimeInput: String): RecipeParts {
         return try {
             val systemPromptRecipe = """
                 You will be provided with vegan recipe content written as unstructured text. This text may include ingredients, preparation steps, and additional relevant details.
@@ -245,13 +257,9 @@ class AddRecipeNextActivity : AppCompatActivity() {
             val cookingTimeResponse =
                 model.generateContent("$systemPromptTime\n\nUser input:\n$userTimeInput").text.toString()
 
-
-            Log.d("GeminiResponseRecipe", recipeSectionsResponse)
-            Log.d("GeminiResponseTime", cookingTimeResponse)
-
             parseRecipe(recipeSectionsResponse, cookingTimeResponse)
         } catch (e: Exception) {
-            Log.e("GeminiError", e.message ?: "Unknown error")
+            Log.d("GeminiError", e.message ?: "Unknown error")
             RecipeParts("","", "", 0, MealType.OTHER ,0)
         }
     }
@@ -265,7 +273,13 @@ class AddRecipeNextActivity : AppCompatActivity() {
         val timerMinutes: Int
     )
 
-    fun parseRecipe(recipeSectionsResponse: String, cookingTimeResponse: String): RecipeParts {
+    private fun isGeminiRecipeValid(recipeParts: RecipeParts): Boolean {
+        return recipeParts.ingredients.isNotBlank() &&
+                recipeParts.instructions.isNotBlank() &&
+                recipeParts.cookingTime > 0
+    }
+
+    private fun parseRecipe(recipeSectionsResponse: String, cookingTimeResponse: String): RecipeParts {
         if (recipeSectionsResponse == "No response from Gemini.") {
             return RecipeParts("", "", "", 0, MealType.OTHER, 0)
         }
@@ -315,11 +329,55 @@ class AddRecipeNextActivity : AppCompatActivity() {
         return RecipeParts(ingredients, instructions, notes, cookingTime, mealType, timerMinutes)
     }
 
-    fun showLoadingOverlay() {
-        findViewById<FrameLayout>(R.id.addRecipeNext_loadingOverlay_fl).visibility = View.VISIBLE
+    private fun addRecipeToDatabase(recipe: Recipe, imageUri: Uri) {
+        val store = FirebaseFirestore.getInstance()
+
+        store.collection("recipes")
+            .add(recipe)
+            .addOnSuccessListener { document ->
+                val recipeId = document.id
+                document.update("id", recipeId)
+                val storage = FirebaseStorage.getInstance()
+                storage.getReference("recipes_images/$recipeId.jpg")
+                    .putFile(imageUri)
+                    .addOnSuccessListener {
+                        updateImageInDocumentAndFinishActivity(document, recipeId, true)
+                    }
+                    .addOnFailureListener {
+                        updateImageInDocumentAndFinishActivity(document, recipeId, false)
+                    }
+            }.addOnFailureListener {
+                hideLoadingOverlay()
+                Toast.makeText(this@AddRecipeNextActivity, "Error adding recipe", Toast.LENGTH_SHORT).show()
+            }
+    }
+    private fun updateImageInDocumentAndFinishActivity(document: DocumentReference, recipeId: String, isSuccessful: Boolean) {
+        val value = if(isSuccessful) {
+            "$recipeId.jpg"
+        } else {
+            ""
+        }
+        document.update("recipeImage", value)
+            .addOnSuccessListener {
+                hideLoadingOverlay()
+                Toast.makeText(this@AddRecipeNextActivity, "Recipe added successfully", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                hideLoadingOverlay()
+                Toast.makeText(this@AddRecipeNextActivity, "Recipe added, but failed to upload image.", Toast.LENGTH_SHORT).show()
+            }
+
+        val intent = Intent(this@AddRecipeNextActivity, RecipeDetailsActivity::class.java)
+        intent.putExtra("recipeId", recipeId)
+        intent.putExtra("fromAddRecipe", true)
+        startActivity(intent)
+        finish()
     }
 
-    fun hideLoadingOverlay() {
+    private fun showLoadingOverlay() {
+        findViewById<FrameLayout>(R.id.addRecipeNext_loadingOverlay_fl).visibility = View.VISIBLE
+    }
+    private fun hideLoadingOverlay() {
         findViewById<FrameLayout>(R.id.addRecipeNext_loadingOverlay_fl).visibility = View.GONE
     }
 }

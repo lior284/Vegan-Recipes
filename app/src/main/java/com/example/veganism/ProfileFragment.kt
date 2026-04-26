@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
@@ -60,8 +61,7 @@ class ProfileFragment : Fragment() {
     ): View? {
         // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_profile, container, false)
-
-        val prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, Context.MODE_PRIVATE)
 
         val etEmail = view.findViewById<TextView>(R.id.profileFragment_email_tv)
         val etFullName = view.findViewById<TextView>(R.id.profileFragment_fullName_tv)
@@ -74,92 +74,14 @@ class ProfileFragment : Fragment() {
         val tvAbout = view.findViewById<TextView>(R.id.profileFragment_about_tv)
         val tvSignOut = view.findViewById<TextView>(R.id.profileFragment_signOut_tv)
 
-        val savedBase64 = prefs.getString("profilePicture", null)
-        if (savedBase64 != null) {
-            val bytes = android.util.Base64.decode(savedBase64, android.util.Base64.DEFAULT)
-            val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        handleProfilePicture(prefs, ivProfilePicture)
 
-            Glide.with(this)
-                .load(bitmap)
-                .circleCrop()
-                .into(ivProfilePicture)
-        } else {
-            Glide.with(this)
-                .load(R.drawable.img_take_profile_picture)
-                .circleCrop()
-                .into(ivProfilePicture)
-        }
-        ivProfilePicture.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    android.Manifest.permission.CAMERA
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 101)
-            } else {
-                openCamera()
-            }
-        }
-        takePictureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == Activity.RESULT_OK) {
-                    val bitmap = result.data?.extras?.get("data") as? Bitmap
-                    bitmap?.let { bmp ->
-                        // After the user confirmed the picture
-                        Glide.with(this)
-                            .load(bmp)
-                            .circleCrop()
-                            .into(ivProfilePicture)
-                        val imageUri = saveBitmapToTempFile(bmp)
-
-                        (requireContext() as MenuActivity).showLoadingOverlayOnMenu()
-
-                        val auth = FirebaseAuth.getInstance()
-                        val user = auth.currentUser
-                        val db = FirebaseFirestore.getInstance()
-                        val storage = FirebaseStorage.getInstance()
-
-                        storage.getReference("profile_pictures/" + user!!.uid + ".jpg")
-                            .putFile(imageUri)
-                            .addOnSuccessListener {
-                                // Save file name in Firestore
-                                db.collection("users").document(user.uid)
-                                    .update("profilePicture", user.uid + ".jpg")
-
-                                // Save Base64 in SharedPreferences
-                                val prefs = requireContext().getSharedPreferences(
-                                    "app_prefs",
-                                    Context.MODE_PRIVATE
-                                )
-                                val stream = java.io.ByteArrayOutputStream()
-                                bmp.compress(Bitmap.CompressFormat.JPEG, 90, stream)
-                                val bytes = stream.toByteArray()
-                                val base64 = android.util.Base64.encodeToString(
-                                    bytes,
-                                    android.util.Base64.DEFAULT
-                                )
-                                prefs.edit().putString("profilePicture", base64).apply()
-                                (requireContext() as MenuActivity).hideLoadingOverlayOnMenu()
-                            }
-                            .addOnFailureListener {
-                                Toast.makeText(
-                                    requireContext(),
-                                    "Error uploading image",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                ivProfilePicture.setImageResource(R.drawable.img_take_profile_picture)
-                                (requireContext() as MenuActivity).hideLoadingOverlayOnMenu()
-                            }
-                    }
-
-                }
-            }
-
-        etEmail.text = prefs.getString("email", "")
-        val firstName = prefs.getString("firstName", "")
-        val lastName = prefs.getString("lastName", "")
+        etEmail.text = prefs.getString(AppPrefsConstants.EMAIL_KEY, "")
+        val firstName = prefs.getString(AppPrefsConstants.FIRST_NAME_KEY, "")
+        val lastName = prefs.getString(AppPrefsConstants.LAST_NAME_KEY, "")
         etFullName.text = "$firstName $lastName"
 
-        val userUID = prefs.getString("userUID", "")
+        val userUID = prefs.getString(AppPrefsConstants.USER_UID_KEY, "")
         scDarkMode.isChecked = SettingsManager.isDarkModeEnabled(requireContext(), userUID.orEmpty())
 
         tvUserDetails.setOnClickListener {
@@ -186,7 +108,6 @@ class ProfileFragment : Fragment() {
         }
 
         tvSignOut.setOnClickListener {
-
             AlertDialog.Builder(requireContext())
                 .setTitle("Sign out")
                 .setMessage("Are you sure you want to sign out?")
@@ -211,6 +132,96 @@ class ProfileFragment : Fragment() {
         }
 
         return view
+    }
+
+    // Loading the profile picture from prefs, setting a clickListener for it, and a callback for it
+    @SuppressLint("UseKtx")
+    private fun handleProfilePicture(prefs: SharedPreferences, ivProfilePicture: ImageView) {
+        val savedBase64 = prefs.getString(AppPrefsConstants.PROFILE_PICTURE_KEY, null)
+        if (savedBase64 != null) {
+            try {
+                val bytes = android.util.Base64.decode(savedBase64, android.util.Base64.DEFAULT)
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                Glide.with(this)
+                    .load(bitmap)
+                    .circleCrop()
+                    .into(ivProfilePicture)
+            } catch (_: Exception) {
+                Glide.with(this)
+                    .load(R.drawable.img_take_profile_picture)
+                    .circleCrop()
+                    .into(ivProfilePicture)
+            }
+        } else {
+            Glide.with(this)
+                .load(R.drawable.img_take_profile_picture)
+                .circleCrop()
+                .into(ivProfilePicture)
+        }
+
+        ivProfilePicture.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.CAMERA
+                ) != PackageManager.PERMISSION_GRANTED) { // If the user doesn't have the permission then requesting it
+                requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 101)
+            } else {
+                openCamera()
+            }
+        }
+
+        takePictureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val bitmap = result.data?.extras?.get("data") as? Bitmap
+                bitmap?.let { bmp ->
+                    // After the user confirmed the picture
+                    Glide.with(this)
+                        .load(bmp)
+                        .circleCrop()
+                        .into(ivProfilePicture)
+                    val imageUri = saveBitmapToTempFile(bmp)
+
+                    (requireContext() as MenuActivity).showLoadingOverlayOnMenu()
+
+                    val auth = FirebaseAuth.getInstance()
+                    val user = auth.currentUser
+                    val db = FirebaseFirestore.getInstance()
+                    val storage = FirebaseStorage.getInstance()
+
+                    storage.getReference("profile_pictures/" + user!!.uid + ".jpg")
+                        .putFile(imageUri)
+                        .addOnSuccessListener {
+                            // Save file name in Firestore
+                            db.collection("users")
+                                .document(user.uid)
+                                .update("profilePicture", user.uid + ".jpg")
+                                .addOnSuccessListener {
+                                    // Save image as base64 in SharedPreferences
+                                    val prefs = requireContext().getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, Context.MODE_PRIVATE)
+                                    val stream = java.io.ByteArrayOutputStream()
+                                    bmp.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+                                    val bytes = stream.toByteArray()
+                                    val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
+
+                                    prefs.edit().putString(AppPrefsConstants.PROFILE_PICTURE_KEY, base64).apply()
+                                    (requireContext() as MenuActivity).hideLoadingOverlayOnMenu()
+                                }
+                                .addOnFailureListener {
+                                    storage.getReference("profile_pictures/" + user.uid + ".jpg").delete()
+                                    Toast.makeText(requireContext(), "Error uploading image, please try again later.", Toast.LENGTH_SHORT).show()
+                                    (requireContext() as MenuActivity).hideLoadingOverlayOnMenu()
+                                }
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(requireContext(), "Error uploading image, please try again later.", Toast.LENGTH_SHORT).show()
+                            ivProfilePicture.setImageResource(R.drawable.img_take_profile_picture)
+                            prefs.edit().remove(AppPrefsConstants.PROFILE_PICTURE_KEY).apply()
+                            (requireContext() as MenuActivity).hideLoadingOverlayOnMenu()
+                        }
+                }
+            }
+        }
     }
 
     private fun saveBitmapToTempFile(bitmap: Bitmap): Uri {

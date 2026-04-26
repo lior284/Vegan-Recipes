@@ -57,44 +57,16 @@ class SigninActivity : AppCompatActivity() {
 
         val btnSubmit = findViewById<Button>(R.id.signIn_submit_btn)
         btnSubmit.setOnClickListener {
-            val allValid = checkAllInputsValid()
-            if (allValid) {
-                val auth = FirebaseAuth.getInstance()
-                auth.signInWithEmailAndPassword(
-                    etEmail.text.toString(),
-                    etPassword.text.toString()
-                )
-                    .addOnCompleteListener(this) { task ->
-                        if (task.isSuccessful) {
-                            Toast.makeText(this, "User Signed In Successfully.", Toast.LENGTH_SHORT).show()
-
-                            val user = auth.currentUser
-                            val db = FirebaseFirestore.getInstance()
-                            db.collection("users").document(user!!.uid).get()
-                                .addOnSuccessListener {
-                                    val myUser = it.toObject(MyUser::class.java)
-                                    saveUserDetailsInPrefs(myUser!!)
-                                    loadUserSettingsFromPrefs(user.uid)
-
-                                    startActivity(Intent(this, MenuActivity::class.java))
-                                    finish()
-                                }
-                                .addOnFailureListener {
-                                    Toast.makeText(this, "Error Loading User", Toast.LENGTH_LONG).show()
-                                }
-                        } else {
-                            val exception = task.exception
-                            showSpecificErrorMessage(exception!!)
-                        }
-                    }
-            } else {
+            if (!checkAllInputsValid()) {
                 Toast.makeText(this, "Invalid field(s): $invalidFields", Toast.LENGTH_LONG).show()
                 invalidFields = ""
+                return@setOnClickListener
             }
+
+            signInUser() // Main function
         }
     }
-    private fun togglePasswordVisibility(visible: Boolean, button: ImageButton)
-    {
+    private fun togglePasswordVisibility(visible: Boolean, button: ImageButton) {
         val typeface = etPassword.typeface // save current font
 
         if (visible) {
@@ -118,7 +90,8 @@ class SigninActivity : AppCompatActivity() {
     private fun checkAllInputsValid(): Boolean {
         var allValid = true
 
-        var curValid = Patterns.EMAIL_ADDRESS.matcher(etEmail.text).matches()
+        val emailText = etEmail.text.trim()
+        var curValid = Patterns.EMAIL_ADDRESS.matcher(emailText).matches()
         if (!curValid)
         {
             allValid = false
@@ -155,18 +128,52 @@ class SigninActivity : AppCompatActivity() {
         }
     }
 
+    private fun signInUser()
+    {
+        val auth = FirebaseAuth.getInstance()
+        auth.signInWithEmailAndPassword(
+            etEmail.text.toString(),
+            etPassword.text.toString()
+        )
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    Toast.makeText(this, "User Signed In Successfully.", Toast.LENGTH_SHORT).show()
+
+                    val user = auth.currentUser
+                    val db = FirebaseFirestore.getInstance()
+                    db.collection("users")
+                        .document(user!!.uid)
+                        .get()
+                        .addOnSuccessListener {
+                            val myUser = it.toObject(MyUser::class.java)
+                            saveUserDetailsInPrefs(myUser!!)
+                            loadUserSettingsFromPrefs(user.uid)
+
+                            startActivity(Intent(this, MenuActivity::class.java))
+                            finish()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(this, "Error signing in user, please try again later.", Toast.LENGTH_LONG).show()
+                        }
+                } else {
+                    val exception = task.exception
+                    showSpecificErrorMessage(exception)
+                }
+            }
+    }
+
     @SuppressLint("UseKtx")
     private fun saveUserDetailsInPrefs(myUser: MyUser) {
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
         val user = FirebaseAuth.getInstance().currentUser
 
         prefs.edit {
-            putBoolean("rememberMe", cbRememberMe.isChecked)
+            putBoolean(AppPrefsConstants.REMEMBER_ME_KEY, cbRememberMe.isChecked)
 
-            putString("firstName", myUser.firstName)
-            putString("lastName", myUser.lastName)
-            putString("email", etEmail.text.toString())
-            putString("userUID", user!!.uid)
+            putString(AppPrefsConstants.FIRST_NAME_KEY, myUser.firstName)
+            putString(AppPrefsConstants.LAST_NAME_KEY, myUser.lastName)
+            putString(AppPrefsConstants.EMAIL_KEY, etEmail.text.toString())
+            putString(AppPrefsConstants.USER_UID_KEY, user!!.uid)
         }
 
         val storage = FirebaseStorage.getInstance()
@@ -175,21 +182,21 @@ class SigninActivity : AppCompatActivity() {
                 val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
                 // Save Base64 in SharedPreferences
-                val prefs = this@SigninActivity.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                val prefs = this@SigninActivity.getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, Context.MODE_PRIVATE)
                 val stream = java.io.ByteArrayOutputStream()
                 bmp.compress(Bitmap.CompressFormat.JPEG, 90, stream)
                 val bytes = stream.toByteArray()
                 val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
-                prefs.edit().putString("profilePicture", base64).apply()
+                prefs.edit().putString(AppPrefsConstants.PROFILE_PICTURE_KEY, base64).apply()
             }
             .addOnFailureListener {
-                prefs.edit().putString("profilePicture", "img_take_profile_picture.png").apply()
+                prefs.edit().remove(AppPrefsConstants.PROFILE_PICTURE_KEY).apply()
             }
     }
     private fun loadUserSettingsFromPrefs(uid: String) {
         SettingsManager.applySettings(this, uid)
     }
-    private fun showSpecificErrorMessage(exception: Exception) {
+    private fun showSpecificErrorMessage(exception: Exception?) {
         when (exception) {
             is FirebaseAuthInvalidUserException -> {
                 Toast.makeText(this, "User does not exist.", Toast.LENGTH_LONG).show()
@@ -198,7 +205,7 @@ class SigninActivity : AppCompatActivity() {
                 Toast.makeText(this, "Email or password is incorrect", Toast.LENGTH_LONG).show()
             }
             is FirebaseNetworkException -> {
-                Toast.makeText(this, "No internet connection.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "No internet connection, please try again later.", Toast.LENGTH_LONG).show()
             }
             else -> {
                 Toast.makeText(this, "Error Signing In.", Toast.LENGTH_LONG).show()
