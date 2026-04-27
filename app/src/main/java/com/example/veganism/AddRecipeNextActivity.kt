@@ -5,9 +5,6 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.text.SpannableString
-import android.text.SpannableStringBuilder
-import android.text.style.LeadingMarginSpan
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -34,7 +31,7 @@ class AddRecipeNextActivity : AppCompatActivity() {
     private lateinit var etCookingTime: EditText
     private var invalidFields: String = ""
     val model = GenerativeModel(
-        modelName = "gemini-2.0-flash", apiKey = BuildConfig.GEMINI_API_KEY
+        modelName = "gemini-2.5-flash", apiKey = BuildConfig.GEMINI_API_KEY
     )
 
     private val chat = model.startChat()

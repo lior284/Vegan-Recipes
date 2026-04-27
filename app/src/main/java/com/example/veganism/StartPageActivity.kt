@@ -26,7 +26,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 class StartPageActivity : AppCompatActivity() {
     private lateinit var imageSwitcher: ImageSwitcher
 
-    private val images = listOf(
+    private val exampleImages = listOf(
         R.drawable.img_example_1,
         R.drawable.img_example_2,
         R.drawable.img_example_3
@@ -37,10 +37,9 @@ class StartPageActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val switchRunnable = object : Runnable {
         override fun run() {
-            index = (index + 1) % images.size
-            imageSwitcher.setImageResource(images[index])
+            index = (index + 1) % exampleImages.size
+            imageSwitcher.setImageResource(exampleImages[index])
             handler.postDelayed(this, switchInterval)
-
         }
     }
 
@@ -58,10 +57,10 @@ class StartPageActivity : AppCompatActivity() {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
+        val db = FirebaseFirestore.getInstance()
 
         if (prefs.getBoolean(AppPrefsConstants.REMEMBER_ME_KEY, false) && user != null) {
             showLoadingOverlay()
-            val db = FirebaseFirestore.getInstance()
             db.collection("users").document(user.uid).get()
                 .addOnSuccessListener {
                     val myUser = it.toObject(MyUser::class.java)
@@ -101,7 +100,7 @@ class StartPageActivity : AppCompatActivity() {
             prefs.edit().putBoolean(AppPrefsConstants.REMEMBER_ME_KEY, false).apply() // Reset rememberMe if user is not logged in
         }
 
-        val cvImageSwitcher = findViewById<CardView>(R.id.startPage_isView_cv)
+        val cvImageSwitcher = findViewById<CardView>(R.id.startPage_startImages_cv)
         if (getResources().configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
             == android.content.res.Configuration.UI_MODE_NIGHT_YES
         ) {
@@ -135,14 +134,15 @@ class StartPageActivity : AppCompatActivity() {
                 )
             }
         }
-        imageSwitcher.setImageResource(images[index])
 
-        handler.postDelayed(switchRunnable, switchInterval)
+        imageSwitcher.setImageResource(exampleImages[index]) // Setting first image
+
+        handler.postDelayed(switchRunnable, switchInterval) // Creating the loop
 
         imageSwitcher.setOnClickListener {
             // Switch image immediately
-            index = (index + 1) % images.size
-            imageSwitcher.setImageResource(images[index])
+            index = (index + 1) % exampleImages.size
+            imageSwitcher.setImageResource(exampleImages[index])
 
             // Pause automatic switching, then resume
             handler.removeCallbacks(switchRunnable)

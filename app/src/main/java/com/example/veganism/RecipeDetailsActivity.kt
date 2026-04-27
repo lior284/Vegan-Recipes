@@ -726,7 +726,7 @@ class RecipeDetailsActivity : AppCompatActivity() {
         val result = SpannableStringBuilder()
 
         for (line in lines) {
-            val bullet = "ג€¢ "
+            val bullet = "• "
             val fullLine = bullet + line.trim() + "\n"
             val spannable = SpannableString(fullLine)
 
