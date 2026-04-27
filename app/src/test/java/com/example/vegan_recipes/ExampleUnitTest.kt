@@ -1,4 +1,4 @@
-package com.example.veganism
+package com.example.vegan_recipes
 
 import org.junit.Test
 

@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Veganism"
+rootProject.name = "Vegan Recipes"
 include(":app")
  

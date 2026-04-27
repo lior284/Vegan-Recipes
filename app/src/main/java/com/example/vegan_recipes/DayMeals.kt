@@ -1,4 +1,4 @@
-package com.example.veganism
+package com.example.vegan_recipes
 
 data class DayMeals(
     val dateTitle: String,

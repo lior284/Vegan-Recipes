@@ -1,4 +1,4 @@
-package com.example.veganism
+package com.example.vegan_recipes
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

@@ -1,4 +1,4 @@
-package com.example.veganism
+package com.example.vegan_recipes
 
 import android.Manifest
 import android.app.AlarmManager
@@ -46,6 +46,7 @@ import com.google.firebase.storage.FirebaseStorage
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import androidx.core.content.edit
 
 class RecipeDetailsActivity : AppCompatActivity() {
 
@@ -619,10 +620,10 @@ class RecipeDetailsActivity : AppCompatActivity() {
             cancelTimerAlarm(oldRecipeId)
         }
 
-        prefs.edit()
-            .putString(TIMER_RECIPE_ID_KEY, recipeId)
-            .putLong(TIMER_END_TIME_KEY, timerEndTime)
-            .apply()
+        prefs.edit {
+            putString(TIMER_RECIPE_ID_KEY, recipeId)
+            putLong(TIMER_END_TIME_KEY, timerEndTime)
+        }
     }
 
     private fun clearSavedTimerState(recipeId: String) {
@@ -630,10 +631,10 @@ class RecipeDetailsActivity : AppCompatActivity() {
         val savedRecipeId = prefs.getString(TIMER_RECIPE_ID_KEY, null)
 
         if (savedRecipeId == recipeId) {
-            prefs.edit()
-                .remove(TIMER_RECIPE_ID_KEY)
-                .remove(TIMER_END_TIME_KEY)
-                .apply()
+            prefs.edit {
+                remove(TIMER_RECIPE_ID_KEY)
+                remove(TIMER_END_TIME_KEY)
+            }
         }
     }
 

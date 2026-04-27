@@ -1,4 +1,4 @@
-package com.example.veganism
+package com.example.vegan_recipes
 
 object AppPrefsConstants {
     const val APP_PREFS_NAME = "app_prefs"

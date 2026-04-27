@@ -1,4 +1,4 @@
-package com.example.veganism
+package com.example.vegan_recipes
 import com.google.firebase.firestore.PropertyName
 
 data class MyUser (

@@ -14,13 +14,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.veganism"
+    namespace = "com.example.vegan_recipes"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.veganism"
+        applicationId = "com.example.vegan_recipes"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
