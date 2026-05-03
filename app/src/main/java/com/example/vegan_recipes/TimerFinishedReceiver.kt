@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.edit
 
 class TimerFinishedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -49,10 +50,10 @@ class TimerFinishedReceiver : BroadcastReceiver() {
         val savedRecipeId = prefs.getString(RecipeDetailsActivity.TIMER_RECIPE_ID_KEY, null)
 
         if (savedRecipeId == recipeId) {
-            prefs.edit()
-                .remove(RecipeDetailsActivity.TIMER_RECIPE_ID_KEY)
-                .remove(RecipeDetailsActivity.TIMER_END_TIME_KEY)
-                .apply()
+            prefs.edit {
+                remove(RecipeDetailsActivity.TIMER_RECIPE_ID_KEY)
+                    .remove(RecipeDetailsActivity.TIMER_END_TIME_KEY)
+            }
         }
     }
 

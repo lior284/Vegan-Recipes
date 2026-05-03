@@ -10,7 +10,7 @@
     tools:context=".NotificationsSettingsActivity">
 
     <TextView
-        android:id="@+id/userDetails_backArrow_iv"
+        android:id="@+id/notificationsSettings_backArrow_iv"
         android:layout_width="wrap_content"
         android:layout_height="50dp"
         android:layout_margin="10dp"
@@ -65,7 +65,6 @@
                 android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/notificationsSettings_timerNotifications_tv"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"

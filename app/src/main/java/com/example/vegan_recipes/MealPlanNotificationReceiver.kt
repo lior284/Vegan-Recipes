@@ -40,5 +40,4 @@ class MealPlanNotificationReceiver : BroadcastReceiver() {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(recipeId.hashCode() + mealType.hashCode(), notification)
     }
-
 }

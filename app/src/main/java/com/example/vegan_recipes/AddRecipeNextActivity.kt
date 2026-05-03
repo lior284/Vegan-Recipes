@@ -108,6 +108,12 @@ class AddRecipeNextActivity : AppCompatActivity() {
                     Toast.makeText(this, "Error adding recipe, please try again.", Toast.LENGTH_LONG).show()
                 }
         }
+
+        val resetBtn = findViewById<Button>(R.id.addRecipeNext_reset_btn)
+        resetBtn.setOnClickListener {
+            etRecipeInfo.text.clear()
+            etCookingTime.text.clear()
+        }
     }
 
     private fun checkAllInputsValid(): Boolean {

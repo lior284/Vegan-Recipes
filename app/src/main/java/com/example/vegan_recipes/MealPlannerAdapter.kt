@@ -45,7 +45,7 @@ class MealPlannerAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.meal_item, parent, false)
+            .inflate(R.layout.day_item, parent, false)
         return ViewHolder(view)
     }
 

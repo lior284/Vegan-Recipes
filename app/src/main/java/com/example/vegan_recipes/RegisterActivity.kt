@@ -220,7 +220,7 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun validateUsernameAndCreateAccount() {
-        val usernameText = etUsername.text.trim()
+        val usernameText = etUsername.text.toString().trim()
         val db = FirebaseFirestore.getInstance()
         db.collection("users")
             .whereEqualTo("username", usernameText)

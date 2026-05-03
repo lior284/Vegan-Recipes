@@ -128,8 +128,7 @@ class SigninActivity : AppCompatActivity() {
         }
     }
 
-    private fun signInUser()
-    {
+    private fun signInUser() {
         val auth = FirebaseAuth.getInstance()
         auth.signInWithEmailAndPassword(
             etEmail.text.toString(),

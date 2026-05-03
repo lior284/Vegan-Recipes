@@ -67,7 +67,7 @@ class RecipeDetailsActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (!isGranted) {
-            Toast.makeText(this, "Notification permission is needed for timer alerts.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Notification permission is needed for timer notifications.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -141,7 +141,7 @@ class RecipeDetailsActivity : AppCompatActivity() {
         }
         onBackPressedDispatcher.addCallback(this, backCallback)
 
-        val back = findViewById<TextView>(R.id.back)
+        val back = findViewById<TextView>(R.id.recipeDetails_back_tv)
         back.setOnClickListener {
             handleBackPressed(backCallback)
         }
@@ -307,11 +307,7 @@ class RecipeDetailsActivity : AppCompatActivity() {
 
                 // If the same recipe is already there then there is nothing to replace
                 if (existingRecipeId == recipeId) {
-                    Toast.makeText(
-                        this,
-                        "This recipe is already planned for ${selectedDay.displayLabel.lowercase()} $mealName.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(this, "This recipe is already planned for ${selectedDay.displayLabel.lowercase()} $mealName.", Toast.LENGTH_SHORT).show()
                 } else if (existingRecipeId.isNullOrBlank()) {
                     saveMealPlanSlot(mealPlanDocument, recipeId, mealField, selectedDay)
                 } else {
@@ -398,8 +394,8 @@ class RecipeDetailsActivity : AppCompatActivity() {
 
             days.add(
                 PlannedDay(
-                    documentId = documentFormatter.format(currentDate),
-                    displayLabel = displayLabel
+                    documentId = documentFormatter.format(currentDate), // 2026-08-18 (for firebase)
+                    displayLabel = displayLabel // Tuesday, Aug 18 (for display)
                 )
             )
             calendar.add(Calendar.DAY_OF_YEAR, 1)
@@ -409,8 +405,8 @@ class RecipeDetailsActivity : AppCompatActivity() {
     }
 
     data class PlannedDay(
-        val documentId: String,
-        val displayLabel: String
+        val documentId: String, // 2026-08-18 (for firebase)
+        val displayLabel: String // Tuesday, Aug 18 (for display)
     )
 
     // Content display

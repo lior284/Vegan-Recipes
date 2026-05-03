@@ -8,7 +8,7 @@
     tools:context=".AboutActivity">
 
     <TextView
-        android:id="@+id/userDetails_backArrow_iv"
+        android:id="@+id/about_backArrow_iv"
         android:layout_width="wrap_content"
         android:layout_height="50dp"
         android:layout_margin="10dp"
@@ -125,14 +125,14 @@
                 android:textColor="@color/primaryUI"
                 android:textSize="22sp" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:fontFamily="@font/quicksand_regular"
-                    android:text="Tap the number to open the messaging app."
-                    android:textColor="@color/primaryUI"
-                    android:textSize="16sp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/quicksand_regular"
+                android:text="Tap the number to open the messaging app."
+                android:textColor="@color/primaryUI"
+                android:textSize="16sp" />
         </LinearLayout>
 
     </LinearLayout>

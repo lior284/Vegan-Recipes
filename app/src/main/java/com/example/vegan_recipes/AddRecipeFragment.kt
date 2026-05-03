@@ -99,7 +99,6 @@ class AddRecipeFragment : Fragment() {
             setErrorOutline(llRecipeImage, true)
         }
 
-
         btnNext.setOnClickListener {
             if(checkAllInputsValid())
             {

@@ -95,7 +95,7 @@ class StartPageActivity : AppCompatActivity() {
                     prefs.edit().putBoolean(AppPrefsConstants.REMEMBER_ME_KEY, false).apply()
                 }
         } else if (user != null) {
-            auth.signOut() // Clear currentUser if user is not logged in and rememberMe is false
+            auth.signOut() // Clear currentUser if user is logged in and rememberMe is false
         } else {
             prefs.edit().putBoolean(AppPrefsConstants.REMEMBER_ME_KEY, false).apply() // Reset rememberMe if user is not logged in
         }

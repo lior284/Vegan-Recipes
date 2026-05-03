@@ -82,7 +82,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:text="3"
+            android:text="0"
             android:textColor="@color/primaryUI"
             android:textSize="25sp" />
     </LinearLayout>

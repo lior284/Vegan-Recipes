@@ -54,7 +54,7 @@ class NotificationsSettingsActivity : AppCompatActivity() {
             return
         }
 
-        val back = findViewById<TextView>(R.id.userDetails_backArrow_iv)
+        val back = findViewById<TextView>(R.id.notificationsSettings_backArrow_iv)
         back.setOnClickListener {
             finish()
         }

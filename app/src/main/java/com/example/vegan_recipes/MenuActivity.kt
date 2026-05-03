@@ -17,11 +17,11 @@ import com.google.firebase.auth.FirebaseAuth
 
 class MenuActivity : AppCompatActivity() {
 
-    private lateinit var homeBtn: TextView
-    private lateinit var addRecipeBtn: TextView
-    private lateinit var weekPlanBtn: TextView
-    private lateinit var profileBtn: TextView
-    private lateinit var registerSignInBtn: TextView
+    private lateinit var tvHome: TextView
+    private lateinit var tvAddRecipe: TextView
+    private lateinit var tvWeekPlan: TextView
+    private lateinit var tvProfile: TextView
+    private lateinit var tvRegisterSignIn: TextView
 
     private lateinit var indicator: View
     private var firstLoad = true
@@ -37,33 +37,33 @@ class MenuActivity : AppCompatActivity() {
             insets
         }
 
-        homeBtn = findViewById<TextView>(R.id.homePage_home_tv)
-        addRecipeBtn = findViewById<TextView>(R.id.homePage_addRecipe_tv)
-        weekPlanBtn = findViewById<TextView>(R.id.homePage_WeekPlan_tv)
-        profileBtn = findViewById<TextView>(R.id.homePage_profile_tv)
-        registerSignInBtn = findViewById<TextView>(R.id.homePage_registerSignIn_tv)
+        tvHome = findViewById<TextView>(R.id.menuPage_home_tv)
+        tvAddRecipe = findViewById<TextView>(R.id.menuPage_addRecipe_tv)
+        tvWeekPlan = findViewById<TextView>(R.id.menuPage_weekPlan_tv)
+        tvProfile = findViewById<TextView>(R.id.menuPage_profile_tv)
+        tvRegisterSignIn = findViewById<TextView>(R.id.menuPage_registerSignIn_tv)
 
-        indicator = findViewById(R.id.homePage_indicator_v)
+        indicator = findViewById(R.id.menuPage_indicator_vw)
 
         val prefs = getSharedPreferences(AppPrefsConstants.APP_PREFS_NAME, MODE_PRIVATE)
 
         val lastFragment = prefs.getString(AppPrefsConstants.LAST_FRAGMENT_KEY, null)
 
-        val (fragment, button) = when (lastFragment) {
-            "AddRecipeFragment" -> AddRecipeFragment() to addRecipeBtn
-            "WeekPlanFragment" -> WeekPlanFragment() to weekPlanBtn
-            "ProfileFragment" -> ProfileFragment() to profileBtn
-            else -> HomeFragment() to homeBtn
+        val (fragment, textView) = when (lastFragment) {
+            "AddRecipeFragment" -> AddRecipeFragment() to tvAddRecipe
+            "WeekPlanFragment" -> WeekPlanFragment() to tvWeekPlan
+            "ProfileFragment" -> ProfileFragment() to tvProfile
+            else -> HomeFragment() to tvHome
         }
 
-        switchFragment(fragment, button)
+        switchFragment(fragment, textView)
 
 
         if (FirebaseAuth.getInstance().currentUser != null) {
-            addRecipeBtn.visibility = View.VISIBLE
-            weekPlanBtn.visibility = View.VISIBLE
-            profileBtn.visibility = View.VISIBLE
-            registerSignInBtn.visibility = View.GONE
+            tvAddRecipe.visibility = View.VISIBLE
+            tvWeekPlan.visibility = View.VISIBLE
+            tvProfile.visibility = View.VISIBLE
+            tvRegisterSignIn.visibility = View.GONE
 
             // Get screen width in pixels
             val displayMetrics = Resources.getSystem().displayMetrics
@@ -72,10 +72,10 @@ class MenuActivity : AppCompatActivity() {
             indicator.layoutParams.width = screenWidth / 4
             indicator.requestLayout()
         } else {
-            addRecipeBtn.visibility = View.GONE
-            weekPlanBtn.visibility = View.GONE
-            profileBtn.visibility = View.GONE
-            registerSignInBtn.visibility = View.VISIBLE
+            tvAddRecipe.visibility = View.GONE
+            tvWeekPlan.visibility = View.GONE
+            tvProfile.visibility = View.GONE
+            tvRegisterSignIn.visibility = View.VISIBLE
 
             // Get screen width in pixels
             val displayMetrics = Resources.getSystem().displayMetrics
@@ -86,30 +86,30 @@ class MenuActivity : AppCompatActivity() {
         }
 
         indicator.post {
-            indicator.x = button.x
+            indicator.x = textView.x
         }
 
-        homeBtn.setOnClickListener {
-            switchFragment(HomeFragment(), homeBtn)
+        tvHome.setOnClickListener {
+            switchFragment(HomeFragment(), tvHome)
         }
-        addRecipeBtn.setOnClickListener {
+        tvAddRecipe.setOnClickListener {
             if (FirebaseAuth.getInstance().currentUser != null) {
-                switchFragment(AddRecipeFragment(), addRecipeBtn)
+                switchFragment(AddRecipeFragment(), tvAddRecipe)
             } else {
                 Toast.makeText(this, "You need to sign in or register", Toast.LENGTH_SHORT).show()
             }
         }
-        weekPlanBtn.setOnClickListener {
+        tvWeekPlan.setOnClickListener {
             if (FirebaseAuth.getInstance().currentUser != null) {
-                switchFragment(WeekPlanFragment(), weekPlanBtn)
+                switchFragment(WeekPlanFragment(), tvWeekPlan)
             } else {
                 Toast.makeText(this, "You need to sign in or register", Toast.LENGTH_SHORT).show()
             }
         }
-        profileBtn.setOnClickListener {
-            switchFragment(ProfileFragment(), profileBtn)
+        tvProfile.setOnClickListener {
+            switchFragment(ProfileFragment(), tvProfile)
         }
-        registerSignInBtn.setOnClickListener {
+        tvRegisterSignIn.setOnClickListener {
             startActivity(Intent(this, StartPageActivity::class.java))
         }
     }
@@ -119,7 +119,7 @@ class MenuActivity : AppCompatActivity() {
     private fun switchFragment(fragment: Fragment, textView: TextView) {
         val fragmentManager = supportFragmentManager
         val fragmentTransaction = fragmentManager.beginTransaction()
-        fragmentTransaction.replace(R.id.fragment_container, fragment)
+        fragmentTransaction.replace(R.id.menuPage_fragmentContainer_fl, fragment)
         fragmentTransaction.commit()
 
         if (!firstLoad) {
@@ -141,11 +141,11 @@ class MenuActivity : AppCompatActivity() {
         indicator.animate().x(x).setDuration(200).start()
     }
 
-    fun showLoadingOverlayOnMenu() {
-        findViewById<FrameLayout>(R.id.homePage_loadingOverlay_fl).visibility = View.VISIBLE
+    public fun showLoadingOverlayOnMenu() {
+        findViewById<FrameLayout>(R.id.menuPage_loadingOverlay_fl).visibility = View.VISIBLE
     }
 
-    fun hideLoadingOverlayOnMenu() {
-        findViewById<FrameLayout>(R.id.homePage_loadingOverlay_fl).visibility = View.GONE
+    public fun hideLoadingOverlayOnMenu() {
+        findViewById<FrameLayout>(R.id.menuPage_loadingOverlay_fl).visibility = View.GONE
     }
 }

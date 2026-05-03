@@ -20,7 +20,7 @@ class AboutActivity : AppCompatActivity() {
             insets
         }
 
-        val back = findViewById<TextView>(R.id.userDetails_backArrow_iv)
+        val back = findViewById<TextView>(R.id.about_backArrow_iv)
         val phone = findViewById<TextView>(R.id.about_bugPhone_tv)
 
         back.setOnClickListener {

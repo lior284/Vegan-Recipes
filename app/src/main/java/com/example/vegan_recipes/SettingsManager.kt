@@ -3,6 +3,7 @@ package com.example.vegan_recipes
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.edit
 
 object SettingsManager {
     private const val SETTINGS_PREFIX = "settings_"
@@ -25,17 +26,17 @@ object SettingsManager {
     }
 
     fun saveDefaultSettings(context: Context, uid: String) {
-        getUserPrefs(context, uid).edit()
-            .putBoolean(DARK_MODE_KEY, false)
-            .putBoolean(TIMER_NOTIFICATIONS_KEY, true)
-            .putBoolean(WEEK_PLAN_NOTIFICATIONS_KEY, true)
-            .putBoolean(BREAKFAST_NOTIFICATIONS_KEY, true)
-            .putBoolean(LUNCH_NOTIFICATIONS_KEY, true)
-            .putBoolean(DINNER_NOTIFICATIONS_KEY, true)
-            .putString(BREAKFAST_TIME_KEY, DEFAULT_BREAKFAST_TIME)
-            .putString(LUNCH_TIME_KEY, DEFAULT_LUNCH_TIME)
-            .putString(DINNER_TIME_KEY, DEFAULT_DINNER_TIME)
-            .apply()
+        getUserPrefs(context, uid).edit {
+            putBoolean(DARK_MODE_KEY, false)
+                .putBoolean(TIMER_NOTIFICATIONS_KEY, false)
+                .putBoolean(WEEK_PLAN_NOTIFICATIONS_KEY, false)
+                .putBoolean(BREAKFAST_NOTIFICATIONS_KEY, true)
+                .putBoolean(LUNCH_NOTIFICATIONS_KEY, true)
+                .putBoolean(DINNER_NOTIFICATIONS_KEY, true)
+                .putString(BREAKFAST_TIME_KEY, DEFAULT_BREAKFAST_TIME)
+                .putString(LUNCH_TIME_KEY, DEFAULT_LUNCH_TIME)
+                .putString(DINNER_TIME_KEY, DEFAULT_DINNER_TIME)
+        }
     }
 
     fun isDarkModeEnabled(context: Context, uid: String): Boolean {

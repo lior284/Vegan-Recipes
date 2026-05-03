@@ -15,27 +15,25 @@
 
 
         <FrameLayout
-            android:id="@+id/fragment_container"
+            android:id="@+id/menuPage_fragmentContainer_fl"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1" />
 
         <LinearLayout
-            android:id="@+id/menuLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_menu"
             android:orientation="vertical">
 
             <LinearLayout
-                android:id="@+id/menuButtonsLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/homePage_home_tv"
+                    android:id="@+id/menuPage_home_tv"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -48,7 +46,7 @@
                     android:textColor="@color/primaryUI" />
 
                 <TextView
-                    android:id="@+id/homePage_addRecipe_tv"
+                    android:id="@+id/menuPage_addRecipe_tv"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -61,7 +59,7 @@
                     android:textColor="@color/primaryUI" />
 
                 <TextView
-                    android:id="@+id/homePage_WeekPlan_tv"
+                    android:id="@+id/menuPage_weekPlan_tv"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -74,7 +72,7 @@
                     android:textColor="@color/primaryUI" />
 
                 <TextView
-                    android:id="@+id/homePage_profile_tv"
+                    android:id="@+id/menuPage_profile_tv"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -87,7 +85,7 @@
                     android:textColor="@color/primaryUI" />
 
                 <TextView
-                    android:id="@+id/homePage_registerSignIn_tv"
+                    android:id="@+id/menuPage_registerSignIn_tv"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -104,7 +102,7 @@
             </LinearLayout>
 
             <View
-                android:id="@+id/homePage_indicator_v"
+                android:id="@+id/menuPage_indicator_vw"
                 android:layout_width="103dp"
                 android:layout_height="4dp"
                 android:layout_gravity="bottom"
@@ -114,7 +112,7 @@
     </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/homePage_loadingOverlay_fl"
+        android:id="@+id/menuPage_loadingOverlay_fl"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#80000000"

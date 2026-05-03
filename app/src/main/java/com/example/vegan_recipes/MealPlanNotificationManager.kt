@@ -13,7 +13,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-object MealPlanNotificationManager { // schedule, cancel, reschedule, create notification
+object MealPlanNotificationManager { // schedule, cancel, reschedule, create notification channel
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
